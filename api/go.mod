@@ -1,6 +1,6 @@
 module github.com/stevesajeev1/gatorplanner-backend
 
-go 1.25.5
+go 1.26.5
 
 tool github.com/air-verse/air
 
