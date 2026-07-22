@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"github.com/stevesajeev1/gatorplanner-backend/internal/api"
+)
 
 func main() {
-	fmt.Println("Hello, world!")
+	api.Run()
 }
