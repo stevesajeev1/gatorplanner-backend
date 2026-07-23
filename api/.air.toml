@@ -6,7 +6,7 @@ testdata_dir = "testdata"
 
 [build]
   cmd = "go build -o ./tmp/main ./cmd"
-  bin = "./tmp/main"
+  entrypoint = ["./tmp/main"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   include_dir = ["cmd", "internal", "docs", "pkgs"]
   exclude_regex = ["_test.go"]
