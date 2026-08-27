@@ -7,7 +7,10 @@ from typing import Any
 
 import psycopg
 import requests
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +27,9 @@ TERM_CODES = {
     "summer": "5",
     "fall": "8",
 }
+
+FETCH_NUM_THREADS = 16
+FETCH_BATCH_SIZE = 50
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,6 +50,13 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--authenticated",
+        type=bool,
+        default=False,
+        help="Makes authenticated requests, requires ONEUF_SESSION to be set. Defaults to False."
+    )
+
+    parser.add_argument(
         "--database-url",
         default=os.environ.get("DATABASE_URL"),
         help="PostgreSQL connection URL. Defaults to DATABASE_URL.",
@@ -56,30 +69,33 @@ def get_term_id(term: str, year: int) -> int:
     return int(f"2{year:02d}{TERM_CODES[term]}")
 
 
-def fetch_courses(term_id: int) -> list[dict]:
-    base_url = (
-        "https://one.ufl.edu/apix/soc/schedule/"
-        f"?category=RES&term={term_id}&last-control-number="
-    )
-
+def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
     logging.info(f"Fetching UF courses for term {term_id}")
 
     all_courses: list[dict] = []
     lock = threading.Lock()
 
-    def fetch_thread(thread_id: int, control_number_start: int):
+    def fetch_thread(thread_id: int, control_number_start: int) -> None:
         control_number = control_number_start
 
         while True:
-            url = base_url + str(control_number)
-
             logging.info(
                 f"Thread-{thread_id}: fetching control number "
                 f"{control_number}"
             )
 
+            params = {
+                "category": "RES",
+                "term": term_id,
+                "last-control-number": control_number
+            }
+
+            # TODO: if authenticated, pass session cookie
+            if authenticated:
+                _ = os.environ["ONEUF_SESSION"]
+
             try:
-                response = requests.get(url, timeout=30)
+                response = requests.get(API_URL, params=params, timeout=30)
                 response.raise_for_status()
                 payload = response.json()
             except requests.RequestException as e:
@@ -98,17 +114,6 @@ def fetch_courses(term_id: int) -> list[dict]:
                     f"Thread-{thread_id}: unexpected response type: "
                     f"{type(payload).__name__}"
                 )
-
-            # Each response is something like:
-            #
-            # [
-            #     {
-            #         "COURSES": [...],
-            #         "LASTCONTROLNUMBER": "...",
-            #         "TOTALROWS": "...",
-            #         "RETRIEVEDROWS": "..."
-            #     }
-            # ]
 
             retrieved_rows = 0
 
@@ -137,15 +142,14 @@ def fetch_courses(term_id: int) -> list[dict]:
             if retrieved_rows == 0:
                 break
 
-            # Same increment used by your original scraper.
-            control_number += 50 * 16
+            control_number += FETCH_BATCH_SIZE * FETCH_NUM_THREADS
 
     threads = []
 
-    for thread_id in range(16):
+    for thread_id in range(FETCH_NUM_THREADS):
         thread = threading.Thread(
             target=fetch_thread,
-            args=(thread_id, 50 * thread_id),
+            args=(thread_id, FETCH_BATCH_SIZE * thread_id),
         )
         thread.start()
         threads.append(thread)
@@ -317,6 +321,9 @@ def parse_time(value: str):
     return datetime.strptime(value, "%I:%M %p").time()
 
 
+# TODO: reorganize this to perform validation upfront, then only do anything
+# this might be unnecessary since we do everything in a transaction
+# TODO: we should collect skipped classes somewhere
 def upsert_course(
     conn: psycopg.Connection,
     course: dict[str, Any],
@@ -359,15 +366,9 @@ def upsert_course(
         first_section["deptName"],
     )
 
-    credits_min = min(
-        float(section["credits_min"])
-        for section in sections
-    )
+    credits_min = float(first_section["credits_min"])
 
-    credits_max = max(
-        float(section["credits_max"])
-        for section in sections
-    )
+    credits_max = float(first_section["credits_max"])
 
     quest_values = [
         parse_quest(section.get("quest"))
@@ -619,44 +620,8 @@ def insert_meet_time(
     )
 
 
-def remove_stale_data(
-    conn: psycopg.Connection,
-    term_id: int,
-    ingestion_run_id: str,
-) -> None:
-    """
-    Delete classes/courses that were not present in this successful
-    ingestion.
-
-    Classes are deleted first because they reference courses.
-    """
-
-    deleted_classes = conn.execute(
-        """
-        DELETE FROM classes
-        WHERE term_id = %s
-          AND ingestion_run_id IS DISTINCT FROM %s
-        """,
-        (term_id, ingestion_run_id),
-    ).rowcount
-
-    deleted_courses = conn.execute(
-        """
-        DELETE FROM courses
-        WHERE term_id = %s
-          AND ingestion_run_id IS DISTINCT FROM %s
-        """,
-        (term_id, ingestion_run_id),
-    ).rowcount
-
-    logger.info(
-        "Removed %d stale classes and %d stale courses",
-        deleted_classes,
-        deleted_courses,
-    )
-
-
 def ingest(
+    authenticated: bool,
     database_url: str,
     term: str,
     year: int,
@@ -670,14 +635,10 @@ def ingest(
         term_id,
     )
 
-    courses = fetch_courses(term_id)
+    courses = fetch_courses(term_id, authenticated)
 
     with psycopg.connect(database_url) as conn:
         with conn.transaction():
-            # Create the run only inside the transaction.
-            #
-            # If anything below fails, the ingestion_runs row is
-            # rolled back as well.
             row = conn.execute(
                 """
                 INSERT INTO ingestion_runs (term_id)
@@ -696,6 +657,7 @@ def ingest(
                 ingestion_run_id,
             )
 
+            # TODO: make this threaded
             for index, course in enumerate(courses, start=1):
                 logger.info(
                     "[%d/%d] Processing %s",
@@ -710,12 +672,6 @@ def ingest(
                     term_id,
                     ingestion_run_id,
                 )
-
-            remove_stale_data(
-                conn,
-                term_id,
-                ingestion_run_id,
-            )
 
             logger.info(
                 "Ingestion run %s completed successfully",
@@ -735,7 +691,14 @@ def main() -> None:
     if not 0 <= args.year <= 99:
         raise ValueError("year must be between 00 and 99")
 
+    if args.authenticated and "ONEUF_SESSION" not in os.environ:
+        raise RuntimeError(
+            "ONEUF_SESSION environment variable must be set "
+            "with --authenticated"
+        )
+
     ingest(
+        authenticated = args.authenticated,
         database_url=args.database_url,
         term=args.term,
         year=args.year,
