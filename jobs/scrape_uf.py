@@ -1,15 +1,14 @@
 import argparse
 import logging
 import os
-from datetime import datetime, time
 import re
 import threading
+from datetime import datetime, time
 from typing import Any
 
 import psycopg
 import requests
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
@@ -53,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--authenticated",
         action="store_true",
-        help="Makes authenticated requests, requires ONEUF_SESSION to be set. Defaults to False."
+        help="Makes authenticated requests, requires ONEUF_SESSION to be set. Defaults to False.",
     )
 
     parser.add_argument(
@@ -70,7 +69,7 @@ def get_term_id(term: str, year: int) -> int:
 
 
 def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
-    logging.info(f"Fetching UF courses for term {term_id}")
+    logger.info(f"Fetching UF courses for term {term_id}")
 
     all_courses: list[dict] = []
     lock = threading.Lock()
@@ -79,40 +78,33 @@ def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
         control_number = control_number_start
 
         while True:
-            logging.info(
-                f"Thread-{thread_id}: fetching control number "
-                f"{control_number}"
-            )
+            logger.info(f"Thread-{thread_id}: fetching control number {control_number}")
 
             params = {
                 "category": "RES",
                 "term": term_id,
-                "last-control-number": control_number
+                "last-control-number": control_number,
             }
 
             cookies = None
             if authenticated:
-                cookies = {
-                    "ONEUF_SESSION": os.environ["ONEUF_SESSION"]
-                }
+                cookies = {"ONEUF_SESSION": os.environ["ONEUF_SESSION"]}
 
             try:
-                response = requests.get(API_URL, params=params, cookies=cookies, timeout=30)
+                response = requests.get(
+                    API_URL, params=params, cookies=cookies, timeout=30
+                )
                 response.raise_for_status()
                 payload = response.json()
             except requests.RequestException as e:
-                logging.error(
-                    f"Thread-{thread_id}: request failed: {e}"
-                )
+                logger.error(f"Thread-{thread_id}: request failed: {e}")
                 raise
             except ValueError as e:
-                logging.error(
-                    f"Thread-{thread_id}: invalid JSON response: {e}"
-                )
+                logger.error(f"Thread-{thread_id}: invalid JSON response: {e}")
                 raise
 
             if not isinstance(payload, list):
-                raise ValueError(
+                raise TypeError(
                     f"Thread-{thread_id}: unexpected response type: "
                     f"{type(payload).__name__}"
                 )
@@ -154,7 +146,7 @@ def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
     for thread in threads:
         thread.join()
 
-    logging.info(f"Received {len(all_courses)} courses from UF")
+    logger.info(f"Received {len(all_courses)} courses from UF")
 
     return all_courses
 
@@ -196,9 +188,7 @@ def parse_meet_type(value: str) -> str:
 
 def parse_quest(value: list[str]) -> str:
     if len(value) > 1:
-        raise ValueError(
-            f"Expected at most one quest value, got: {value!r}"
-        )
+        raise ValueError(f"Expected at most one quest value, got: {value!r}")
 
     return str(value[0]).strip().title()
 
@@ -212,9 +202,7 @@ def parse_words(section: dict) -> int:
     try:
         return int(value) * 1000
     except ValueError as exc:
-        raise ValueError(
-            f"Invalid grWriting value: {value!r}"
-        ) from exc
+        raise ValueError(f"Invalid grWriting value: {value!r}") from exc
 
 
 def parse_building(meet_time: dict[str, Any]) -> str:
@@ -229,7 +217,7 @@ def parse_building(meet_time: dict[str, Any]) -> str:
 
 
 def parse_time(value: str) -> time:
-    return datetime.strptime(value, "%I:%M %p").time()
+    return datetime.strptime(value, "%I:%M %p").time()  # noqa: DTZ007
 
 
 def clean_text(value: str) -> str:
@@ -264,7 +252,7 @@ def upsert_course(
     dept_code = first_section.get("deptCode")
 
     if not dept_code:
-        logging.warning(
+        logger.warning(
             "Course %s has no deptCode; skipping",
             code,
         )
@@ -273,7 +261,7 @@ def upsert_course(
     try:
         dept_code = int(dept_code)
     except (TypeError, ValueError):
-        logging.warning(
+        logger.warning(
             "Course %s has invalid deptCode %r; skipping",
             code,
             dept_code,
@@ -293,9 +281,7 @@ def upsert_course(
     gen_eds = [value for section in sections for value in section["genEd"]]
 
     quest_values = [
-        parse_quest(section["quest"])
-        for section in sections
-        if section["quest"]
+        parse_quest(section["quest"]) for section in sections if section["quest"]
     ]
 
     quest = quest_values[0] if quest_values else None
@@ -497,9 +483,7 @@ def update_class_meet_times(
 
 
 def update_class_instructors(
-    conn: psycopg.Connection,
-    section: dict[str, Any],
-    class_id: str
+    conn: psycopg.Connection, section: dict[str, Any], class_id: str
 ) -> None:
     # Get existing instructors for class
     rows = conn.execute(
@@ -580,46 +564,45 @@ def ingest(
 
     courses = fetch_courses(term_id, authenticated)
 
-    with psycopg.connect(database_url) as conn:
-        with conn.transaction():
-            row = conn.execute(
-                """
+    with psycopg.connect(database_url) as conn, conn.transaction():
+        row = conn.execute(
+            """
                 INSERT INTO ingestion_runs (term_id)
                 VALUES (%s)
                 RETURNING id
                 """,
-                (term_id,),
-            ).fetchone()
+            (term_id,),
+        ).fetchone()
 
-            assert row is not None
+        assert row is not None
 
-            ingestion_run_id = row[0]
+        ingestion_run_id = row[0]
 
+        logger.info(
+            "Created ingestion run %s",
+            ingestion_run_id,
+        )
+
+        for index, course in enumerate(courses, start=1):
             logger.info(
-                "Created ingestion run %s",
+                "[%d/%d] Processing %s",
+                index,
+                len(courses),
+                course["code"],
+            )
+
+            upsert_course(
+                authenticated,
+                conn,
+                course,
+                term_id,
                 ingestion_run_id,
             )
 
-            for index, course in enumerate(courses, start=1):
-                logger.info(
-                    "[%d/%d] Processing %s",
-                    index,
-                    len(courses),
-                    course["code"],
-                )
-
-                upsert_course(
-                    authenticated,
-                    conn,
-                    course,
-                    term_id,
-                    ingestion_run_id,
-                )
-
-            logger.info(
-                "Ingestion run %s completed successfully",
-                ingestion_run_id,
-            )
+        logger.info(
+            "Ingestion run %s completed successfully",
+            ingestion_run_id,
+        )
 
 
 def main() -> None:
@@ -636,12 +619,11 @@ def main() -> None:
 
     if args.authenticated and "ONEUF_SESSION" not in os.environ:
         raise RuntimeError(
-            "ONEUF_SESSION environment variable must be set "
-            "with --authenticated"
+            "ONEUF_SESSION environment variable must be set with --authenticated"
         )
 
     ingest(
-        authenticated = args.authenticated,
+        authenticated=args.authenticated,
         database_url=args.database_url,
         term=args.term,
         year=args.year,
