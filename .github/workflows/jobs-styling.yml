@@ -1,0 +1,24 @@
+name: Jobs Linting/Formatting
+
+on:
+  pull_request:
+    paths:
+      - "jobs/**"
+      - ".github/workflows/jobs-styling.yml"
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check linting
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: check jobs
+
+      - name: Check formatting
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: format --check jobs

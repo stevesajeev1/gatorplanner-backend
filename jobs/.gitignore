@@ -1,0 +1,13 @@
+# uv
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Ruff
+.ruff_cache/
+
+# Environment
+.env*
+!.env*.example
