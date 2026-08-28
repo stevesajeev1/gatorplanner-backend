@@ -13,11 +13,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Ruff
+      - name: Check linting
         uses: astral-sh/ruff-action@v3
         with:
           args: check jobs
 
-      - uses: astral-sh/ruff-action@v3
+      - name: Check formatting
+        uses: astral-sh/ruff-action@v3
         with:
           args: format --check jobs
