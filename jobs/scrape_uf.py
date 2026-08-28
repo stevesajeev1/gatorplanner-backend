@@ -442,24 +442,58 @@ def upsert_class(
 
     class_id = row[0]
 
-    # Update class meet times
     if authenticated:
-        conn.execute(
-            """
-            DELETE FROM class_meet_times
-            WHERE class_id = %s
-            """,
-            (class_id,),
-        )
-
-        for meet_time in section["meetTimes"]:
-            insert_meet_time(
-                conn,
-                class_id,
-                meet_time,
-            )
+        update_class_meet_times(conn, section, class_id)
 
     update_class_instructors(conn, section, class_id)
+
+
+def update_class_meet_times(
+    conn: psycopg.Connection,
+    section: dict[str, Any],
+    class_id: str,
+) -> None:
+    conn.execute(
+        """
+        DELETE FROM class_meet_times
+        WHERE class_id = %s
+        """,
+        (class_id,),
+    )
+
+    meet_times = section["meetTimes"]
+
+    with conn.cursor() as cur:
+        cur.executemany(
+            """
+            INSERT INTO class_meet_times (
+                class_id,
+                number,
+                days,
+                time_begin,
+                time_end,
+                period_begin,
+                period_end,
+                building
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            """,
+            [
+                (
+                    class_id,
+                    int(meet_time["meetNo"]),
+                    meet_time["meetDays"],
+                    parse_time(meet_time["meetTimeBegin"]),
+                    parse_time(meet_time["meetTimeEnd"]),
+                    meet_time["meetPeriodBegin"],
+                    meet_time["meetPeriodEnd"],
+                    parse_building(meet_time),
+                )
+                for meet_time in meet_times
+            ],
+        )
 
 
 def update_class_instructors(
@@ -529,47 +563,6 @@ def update_class_instructors(
         )
 
 
-def insert_meet_time(
-    conn: psycopg.Connection,
-    class_id: str,
-    meet_time: dict[str, Any],
-) -> None:
-    conn.execute(
-        """
-        INSERT INTO class_meet_times (
-            class_id,
-            number,
-            days,
-            time_begin,
-            time_end,
-            period_begin,
-            period_end,
-            building
-        )
-        VALUES (
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s,
-            %s
-        )
-        """,
-        (
-            class_id,
-            int(meet_time["meetNo"]),
-            meet_time["meetDays"],
-            parse_time(meet_time["meetTimeBegin"]),
-            parse_time(meet_time["meetTimeEnd"]),
-            meet_time["meetPeriodBegin"],
-            meet_time["meetPeriodEnd"],
-            parse_building(meet_time),
-        ),
-    )
-
-
 def ingest(
     authenticated: bool,
     database_url: str,
@@ -607,7 +600,6 @@ def ingest(
                 ingestion_run_id,
             )
 
-            # TODO: make this threaded or batch upserts
             for index, course in enumerate(courses, start=1):
                 logger.info(
                     "[%d/%d] Processing %s",
