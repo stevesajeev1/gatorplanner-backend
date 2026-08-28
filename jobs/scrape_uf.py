@@ -1,7 +1,8 @@
 import argparse
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, time
+import re
 import threading
 from typing import Any
 
@@ -51,8 +52,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--authenticated",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Makes authenticated requests, requires ONEUF_SESSION to be set. Defaults to False."
     )
 
@@ -90,12 +90,14 @@ def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
                 "last-control-number": control_number
             }
 
-            # TODO: if authenticated, pass session cookie
+            cookies = None
             if authenticated:
-                _ = os.environ["ONEUF_SESSION"]
+                cookies = {
+                    "ONEUF_SESSION": os.environ["ONEUF_SESSION"]
+                }
 
             try:
-                response = requests.get(API_URL, params=params, timeout=30)
+                response = requests.get(API_URL, params=params, cookies=cookies, timeout=30)
                 response.raise_for_status()
                 payload = response.json()
             except requests.RequestException as e:
@@ -121,17 +123,12 @@ def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
                 if not isinstance(page, dict):
                     continue
 
-                page_courses = page.get("COURSES", [])
-
-                if not isinstance(page_courses, list):
-                    raise ValueError(
-                        f"Thread-{thread_id}: COURSES is not a list"
-                    )
+                page_courses = page["COURSES"]
 
                 with lock:
                     all_courses.extend(page_courses)
 
-                value = page.get("RETRIEVEDROWS", 0)
+                value = page["RETRIEVEDROWS"]
 
                 try:
                     retrieved_rows += int(value or 0)
@@ -183,59 +180,7 @@ def get_or_create_department(
     return row[0]
 
 
-def get_or_create_instructor(
-    conn: psycopg.Connection,
-    name: str,
-) -> str:
-    """
-    Find an instructor by name.
-
-    Names are intentionally NOT unique. If multiple instructors have
-    the same name, this function does not attempt to distinguish them.
-    That distinction can be handled later by the RMP ingestion job
-    using the classes they teach.
-    """
-
-    rows = conn.execute(
-        """
-        SELECT id
-        FROM instructors
-        WHERE name = %s
-        ORDER BY id
-        """,
-        (name,),
-    ).fetchall()
-
-    if len(rows) == 1:
-        return rows[0][0]
-
-    if len(rows) > 1:
-        logger.warning(
-            "Multiple instructors already exist with name %r; "
-            "using the first existing instructor",
-            name,
-        )
-        return rows[0][0]
-
-    row = conn.execute(
-        """
-        INSERT INTO instructors (name)
-        VALUES (%s)
-        RETURNING id
-        """,
-        (name,),
-    ).fetchone()
-
-    assert row is not None
-
-    return row[0]
-
-
 def parse_meet_type(value: str) -> str:
-    """
-    Convert UF's sectWeb value into the class_meet_type enum.
-    """
-
     mapping = {
         "PC": "Primarily Classroom",
         "HB": "Hybrid",
@@ -249,38 +194,19 @@ def parse_meet_type(value: str) -> str:
         raise ValueError(f"Unknown UF sectWeb value: {value!r}")
 
 
-def parse_quest(value) -> str | None:
-    if not value:
-        return None
+def parse_quest(value: list[str]) -> str:
+    if len(value) > 1:
+        raise ValueError(
+            f"Expected at most one quest value, got: {value!r}"
+        )
 
-    if isinstance(value, list):
-        if not value:
-            return None
-
-        if len(value) > 1:
-            raise ValueError(
-                f"Expected at most one quest value, got: {value!r}"
-            )
-
-        value = value[0]
-
-    value = str(value).strip()
-
-    if not value:
-        return None
-
-    return value.title()
+    return str(value[0]).strip().title()
 
 
 def parse_words(section: dict) -> int:
-    value = section.get("grWriting")
+    value = section["grWriting"]
 
-    if value is None:
-        return 0
-
-    value = str(value).strip()
-
-    if not value or value.upper() == "N":
+    if value == "N":
         return 0
 
     try:
@@ -292,50 +218,44 @@ def parse_words(section: dict) -> int:
 
 
 def parse_building(meet_time: dict[str, Any]) -> str:
-    """
-    building is:
-
-        meetBuilding + meetRoom
-
-    if both are present.
-
-    If both are empty, use meetBldgCode.
-    """
-
-    building = (meet_time.get("meetBuilding") or "").strip()
-    room = (meet_time.get("meetRoom") or "").strip()
+    # Return building + room if present, else code
+    building = meet_time["meetBuilding"]
+    room = meet_time["meetRoom"]
 
     if building and room:
         return f"{building} {room}"
 
-    if building:
-        return building
-
-    if room:
-        return room
-
-    return (meet_time.get("meetBldgCode") or "").strip()
+    return meet_time["meetBldgCode"]
 
 
-def parse_time(value: str):
+def parse_time(value: str) -> time:
     return datetime.strptime(value, "%I:%M %p").time()
 
 
-# TODO: reorganize this to perform validation upfront, then only do anything
-# this might be unnecessary since we do everything in a transaction
-# TODO: we should collect skipped classes somewhere
+def clean_text(value: str) -> str:
+    # Remove zero-width and other invisible formatting characters
+    value = re.sub(r"[\u200B-\u200D\uFEFF]", "", value)
+
+    # Normalize non-breaking hyphen to regular hyphen
+    value = value.replace("\u2011", "-")
+
+    return value
+
+
 def upsert_course(
+    authenticated: bool,
     conn: psycopg.Connection,
     course: dict[str, Any],
     term_id: int,
     ingestion_run_id: str,
 ) -> None:
-    sections = course.get("sections", [])
+    code = course["code"]
+    sections = course["sections"]
 
     if not sections:
         logger.warning(
             "Course %s has no sections; skipping",
-            course.get("code"),
+            code,
         )
         return
 
@@ -346,7 +266,7 @@ def upsert_course(
     if not dept_code:
         logging.warning(
             "Course %s has no deptCode; skipping",
-            course.get("code"),
+            code,
         )
         return
 
@@ -355,7 +275,7 @@ def upsert_course(
     except (TypeError, ValueError):
         logging.warning(
             "Course %s has invalid deptCode %r; skipping",
-            course.get("code"),
+            code,
             dept_code,
         )
         return
@@ -370,23 +290,19 @@ def upsert_course(
 
     credits_max = float(first_section["credits_max"])
 
+    gen_eds = [value for section in sections for value in section["genEd"]]
+
     quest_values = [
-        parse_quest(section.get("quest"))
+        parse_quest(section["quest"])
         for section in sections
-        if section.get("quest")
+        if section["quest"]
     ]
 
     quest = quest_values[0] if quest_values else None
 
-    is_ai = any(
-        bool(section.get("isAICourse", False))
-        for section in sections
-    )
+    is_ai = first_section.get("isAICourse", False)
 
-    is_honors = any(
-        bool(section.get("isHonorsClass", False))
-        for section in sections
-    )
+    is_honors = first_section.get("isHonorsClass", False)
 
     conn.execute(
         """
@@ -448,20 +364,14 @@ def upsert_course(
             term_id,
             course["code"],
             course["name"],
-            course.get("description", ""),
-            first_section.get("simpleSyllabusParams", ""),
-            course.get("prerequisites", ""),
+            clean_text(course["description"]),
+            first_section["simpleSyllabusParams"],
+            course["prerequisites"],
             credits_min,
             credits_max,
             department_id,
             parse_words(first_section),
-            quest_values and list(
-                {
-                    value
-                    for section in sections
-                    for value in section.get("genEd", [])
-                }
-            ) or [],
+            gen_eds,
             quest,
             is_ai,
             is_honors,
@@ -471,6 +381,7 @@ def upsert_course(
 
     for section in sections:
         upsert_class(
+            authenticated,
             conn,
             course,
             section,
@@ -480,6 +391,7 @@ def upsert_course(
 
 
 def upsert_class(
+    authenticated: bool,
     conn: psycopg.Connection,
     course: dict[str, Any],
     section: dict[str, Any],
@@ -520,7 +432,7 @@ def upsert_class(
             course_id,
             term_id,
             class_number,
-            section.get("note") or None,
+            clean_text(section["note"]),
             meet_type,
             ingestion_run_id,
         ),
@@ -530,52 +442,90 @@ def upsert_class(
 
     class_id = row[0]
 
-    # Replace meeting times for this class.
-    conn.execute(
-        """
-        DELETE FROM class_meet_times
-        WHERE class_id = %s
-        """,
-        (class_id,),
-    )
-
-    for meet_time in section.get("meetTimes", []):
-        insert_meet_time(
-            conn,
-            class_id,
-            meet_time,
+    # Update class meet times
+    if authenticated:
+        conn.execute(
+            """
+            DELETE FROM class_meet_times
+            WHERE class_id = %s
+            """,
+            (class_id,),
         )
 
-    # Replace instructor relationships for this class.
+        for meet_time in section["meetTimes"]:
+            insert_meet_time(
+                conn,
+                class_id,
+                meet_time,
+            )
+
+    update_class_instructors(conn, section, class_id)
+
+
+def update_class_instructors(
+    conn: psycopg.Connection,
+    section: dict[str, Any],
+    class_id: str
+) -> None:
+    # Get existing instructors for class
+    rows = conn.execute(
+        """
+        SELECT i.id, i.name
+        FROM instructors i
+        JOIN class_instructors ci
+            ON ci.instructor_id = i.id
+        WHERE ci.class_id = %s;
+        """,
+        (class_id,),
+    ).fetchall()
+
+    existing_instructor_names = {row[1] for row in rows}
+
+    # Determine instructors that were added/removed
+    instructor_names = {value["name"].title() for value in section["instructors"]}
+
+    new_instructor_names = []
+    for instructor_name in instructor_names:
+        if instructor_name not in existing_instructor_names:
+            new_instructor_names.append(instructor_name)
+
+    removed_instructor_ids = []
+    for instructor_id, instructor_name in rows:
+        if instructor_name not in instructor_names:
+            removed_instructor_ids.append(instructor_id)
+
+    # Delete removed instructors
     conn.execute(
         """
         DELETE FROM class_instructors
         WHERE class_id = %s
+        AND instructor_id = ANY(%s)
         """,
-        (class_id,),
+        (class_id, removed_instructor_ids),
     )
 
-    for instructor in section.get("instructors", []):
-        name = (instructor.get("name") or "").strip()
-
-        if not name:
-            continue
-
-        instructor_id = get_or_create_instructor(
-            conn,
-            name,
-        )
+    # Create new instructors
+    if new_instructor_names:
+        # Always create a new instructor (even if an instructor with the same name exists)
+        # This is because two instructors can have the same name but teach separate classes.
+        # The "merging" of instructors will be handled in a later job.
+        rows = conn.execute(
+            """
+            INSERT INTO instructors (name)
+            SELECT name
+            FROM unnest(%s::text[]) AS name
+            RETURNING id
+            """,
+            (new_instructor_names,),
+        ).fetchall()
 
         conn.execute(
             """
-            INSERT INTO class_instructors (
-                class_id,
-                instructor_id
-            )
-            VALUES (%s, %s)
-            ON CONFLICT DO NOTHING
+            INSERT INTO class_instructors (class_id, instructor_id)
+            SELECT %s, id
+            FROM unnest(%s::uuid[]) AS id
             """,
-            (class_id, instructor_id),
+            (class_id, [row[0] for row in rows]),
         )
 
 
@@ -610,11 +560,11 @@ def insert_meet_time(
         (
             class_id,
             int(meet_time["meetNo"]),
-            meet_time.get("meetDays", []),
+            meet_time["meetDays"],
             parse_time(meet_time["meetTimeBegin"]),
             parse_time(meet_time["meetTimeEnd"]),
-            int(meet_time["meetPeriodBegin"]),
-            int(meet_time["meetPeriodEnd"]),
+            meet_time["meetPeriodBegin"],
+            meet_time["meetPeriodEnd"],
             parse_building(meet_time),
         ),
     )
@@ -657,16 +607,17 @@ def ingest(
                 ingestion_run_id,
             )
 
-            # TODO: make this threaded
+            # TODO: make this threaded or batch upserts
             for index, course in enumerate(courses, start=1):
                 logger.info(
                     "[%d/%d] Processing %s",
                     index,
                     len(courses),
-                    course.get("code"),
+                    course["code"],
                 )
 
                 upsert_course(
+                    authenticated,
                     conn,
                     course,
                     term_id,

@@ -37,7 +37,17 @@ alter table class_meet_times drop constraint period_end_after_begin;
 alter table class_meet_times alter column period_begin type text using period_begin::text;
 alter table class_meet_times alter column period_end type text using period_end::text;
 
+-- fix days constraint
+alter table class_meet_times drop constraint valid_days;
+
+alter table class_meet_times add constraint valid_days check (days <@ ARRAY['M','T','W','R','F','S','U']::char(1)[]);
+
 -- +goose Down
+
+-- will fail if there is data containing day that is not M-F
+alter table class_meet_times drop constraint valid_days;
+
+alter table class_meet_times add constraint valid_days check (days <@ ARRAY['M','T','W','R','F']::char(1)[]);
 
 -- will fail if there is data containing non-numeric periods
 alter table class_meet_times alter column period_end type integer using period_end::integer;
