@@ -16,15 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Cleanup ingestion runs."
-    )
+    parser = argparse.ArgumentParser(description="Cleanup ingestion runs.")
 
     parser.add_argument(
-            "--database-url",
-            default=os.environ.get("DATABASE_URL"),
-            help="PostgreSQL connection URL. Defaults to DATABASE_URL.",
-        )
+        "--database-url",
+        default=os.environ.get("DATABASE_URL"),
+        help="PostgreSQL connection URL. Defaults to DATABASE_URL.",
+    )
 
     return parser.parse_args()
 
