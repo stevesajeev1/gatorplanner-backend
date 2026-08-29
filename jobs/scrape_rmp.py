@@ -1,11 +1,11 @@
 import argparse
-from collections import defaultdict
-from dataclasses import dataclass
 import logging
 import os
 import random
 import threading
 import time
+from collections import defaultdict
+from dataclasses import dataclass
 
 import curl_cffi
 import psycopg
@@ -49,9 +49,7 @@ FETCH_NUM_THREADS = 16
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Ingest RMP data into PostgreSQL."
-    )
+    parser = argparse.ArgumentParser(description="Ingest RMP data into PostgreSQL.")
 
     parser.add_argument(
         "--database-url",
@@ -89,8 +87,6 @@ def request_with_retries(
     max_retries: int = 5,
     **kwargs,
 ) -> curl_cffi.Response:
-    global threads_rate_limited
-
     attempt = 0
     while True:
         try:
@@ -146,10 +142,7 @@ def request_with_retries(
         attempt += 1
 
 
-def fetch_instructors(
-    database_url: str,
-    school_id: str
-) -> dict[str, list[Instructor]]:
+def fetch_instructors(database_url: str, school_id: str) -> dict[str, list[Instructor]]:
     with psycopg.connect(database_url) as conn:
         rows = conn.execute(
             """
@@ -170,7 +163,9 @@ def fetch_instructors(
         i = thread_id
         while i < instructors_count:
             if i % (FETCH_NUM_THREADS * 10) == thread_id:
-                logger.info(f"Thread-{thread_id}: fetching instructor {i}/{instructors_count}")
+                logger.info(
+                    f"Thread-{thread_id}: fetching instructor {i}/{instructors_count}"
+                )
 
             instructor_name = rows[i][0]
 
@@ -189,7 +184,7 @@ def fetch_instructors(
                     },
                     timeout=30,
                     impersonate="chrome",
-                    thread_id=thread_id
+                    thread_id=thread_id,
                 )
 
                 payload = response.json()
@@ -212,7 +207,9 @@ def fetch_instructors(
                     rating=node["avgRatingRounded"],
                     difficulty=node["avgDifficultyRounded"],
                     take_again=node["wouldTakeAgainPercentRounded"],
-                    courses=[course["courseName"].upper() for course in node["courseCodes"]]
+                    courses=[
+                        course["courseName"].upper() for course in node["courseCodes"]
+                    ],
                 )
 
                 with lock:
@@ -314,10 +311,7 @@ def update_instructor(
         )
 
 
-def ingest(
-    database_url: str,
-    school_id: str
-) -> None:
+def ingest(database_url: str, school_id: str) -> None:
     logger.info(
         "Starting RMP ingestion",
     )
@@ -333,11 +327,7 @@ def ingest(
                 name,
             )
 
-            update_instructor(
-                conn,
-                name,
-                instructor
-            )
+            update_instructor(conn, name, instructor)
 
 
 def main() -> None:
@@ -350,15 +340,16 @@ def main() -> None:
         )
 
     if not args.school_id:
-            raise RuntimeError(
-                "RMP_SCHOOL_ID must be provided with --school-id "
-                "or the RMP_SCHOOL_ID environment variable"
-            )
+        raise RuntimeError(
+            "RMP_SCHOOL_ID must be provided with --school-id "
+            "or the RMP_SCHOOL_ID environment variable"
+        )
 
     ingest(
         database_url=args.database_url,
         school_id=args.school_id,
     )
+
 
 if __name__ == "__main__":
     main()
