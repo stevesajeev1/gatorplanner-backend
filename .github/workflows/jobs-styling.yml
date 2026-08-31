@@ -16,9 +16,9 @@ jobs:
       - name: Check linting
         uses: astral-sh/ruff-action@v3
         with:
-          args: check jobs
+          args: check jobs --config jobs/pyproject.toml
 
       - name: Check formatting
         uses: astral-sh/ruff-action@v3
         with:
-          args: format --check jobs
+          args: format --check jobs --config jobs/pyproject.toml
