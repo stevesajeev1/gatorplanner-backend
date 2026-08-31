@@ -21,5 +21,39 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
 
+  elasticsearch:
+    image: elasticsearch:9.5.2
+    container_name: elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - 9200:9200
+    attach: false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  elasticsearch-init:
+    image: curlimages/curl:8.21.0
+    container_name: elasticsearch-init
+    user: root
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ./elasticsearch/init.sh:/init.sh:ro
+      - ./elasticsearch/indexes:/indexes:ro
+      - elasticsearch-init_state:/state
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  elasticsearch_data:
+  elasticsearch-init_state:

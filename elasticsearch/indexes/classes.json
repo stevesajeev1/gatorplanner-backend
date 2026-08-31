@@ -1,0 +1,136 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "analyzer": {
+        "class_text": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "term_id": {
+        "type": "integer"
+      },
+      "number": {
+        "type": "integer"
+      },
+      "note": {
+        "type": "text",
+        "analyzer": "class_text"
+      },
+      "meet_type": {
+        "type": "keyword"
+      },
+      "course_code": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "course_code_prefix": {
+        "type": "keyword"
+      },
+      "course_level": {
+        "type": "integer"
+      },
+      "course_is_lab": {
+        "type": "boolean"
+      },
+      "course_name": {
+        "type": "text",
+        "analyzer": "class_text"
+      },
+      "course_description": {
+        "type": "text",
+        "analyzer": "class_text"
+      },
+      "course_prerequisites": {
+        "type": "text",
+        "analyzer": "class_text"
+      },
+      "course_credits": {
+        "type": "double_range"
+      },
+      "course_department": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
+      },
+      "course_words": {
+        "type": "integer"
+      },
+      "course_gen_eds": {
+        "type": "keyword"
+      },
+      "course_quest": {
+        "type": "keyword"
+      },
+      "course_is_ai": {
+        "type": "boolean"
+      },
+      "course_is_honors": {
+        "type": "boolean"
+      },
+      "meet_times": {
+        "type": "nested",
+        "properties": {
+          "days": {
+            "type": "keyword"
+          },
+          "time": {
+            "type": "integer_range"
+          },
+          "period": {
+            "type": "integer_range"
+          },
+          "building": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "instructors": {
+        "type": "nested",
+        "properties": {
+          "name": {
+            "type": "text",
+            "analyzer": "class_text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          },
+          "rating": {
+            "type": "double"
+          },
+          "difficulty": {
+            "type": "double"
+          },
+          "take_again": {
+            "type": "double"
+          }
+        }
+      }
+    }
+  }
+}
