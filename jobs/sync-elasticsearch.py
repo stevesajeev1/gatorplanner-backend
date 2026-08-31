@@ -125,7 +125,7 @@ def sync(
                                 'period', jsonb_build_object(
                                     'gte',
                                     CASE
-                                        WHEN cmt.period_begin LIKE 'E%'
+                                        WHEN cmt.period_begin LIKE 'E%%'
                                             THEN 11 + substring(
                                                 cmt.period_begin FROM 2
                                             )::integer
@@ -133,7 +133,7 @@ def sync(
                                     END,
                                     'lte',
                                     CASE
-                                        WHEN cmt.period_end LIKE 'E%'
+                                        WHEN cmt.period_end LIKE 'E%%'
                                             THEN 11 + substring(
                                                 cmt.period_end FROM 2
                                             )::integer
