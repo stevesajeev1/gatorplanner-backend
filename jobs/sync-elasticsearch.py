@@ -18,8 +18,27 @@ logging.getLogger("elastic_transport").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
+TERM_CODES = {
+    "spring": "1",
+    "summer": "5",
+    "fall": "8",
+}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Sync Elasticsearch.")
+
+    parser.add_argument(
+        "term",
+        choices=TERM_CODES,
+        help="Term to ingest: spring, summer, or fall",
+    )
+
+    parser.add_argument(
+        "year",
+        type=int,
+        help="Two-digit year, e.g. 26 for 2026",
+    )
 
     parser.add_argument(
         "--database-url",
@@ -36,10 +55,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sync(database_url: str, es_client: Elasticsearch) -> None:
+def get_term_id(term: str, year: int) -> int:
+    return int(f"2{year:02d}{TERM_CODES[term]}")
+
+
+def sync(
+    database_url: str,
+    es_client: Elasticsearch,
+    term: str,
+    year: int,
+) -> None:
+    term_id = get_term_id(term, year)
+
     logger.info("Starting Elasticsearch sync")
 
-    es_ids = {doc["_id"] for doc in scan(es_client, index="classes")}
+    es_ids = {
+        doc["_id"]
+        for doc in scan(
+            es_client,
+            index="classes",
+            query={"query": {"term": {"term_id": term_id}}},
+        )
+    }
 
     actions = []
     db_ids = set()
@@ -48,7 +85,6 @@ def sync(database_url: str, es_client: Elasticsearch) -> None:
             """
             SELECT
                 cl.id,
-                cl.term_id,
                 cl.number,
                 cl.note,
                 cl.meet_type,
@@ -139,32 +175,35 @@ def sync(database_url: str, es_client: Elasticsearch) -> None:
 
             JOIN departments d
                 ON d.id = c.department_id
-        """
+
+            WHERE cl.term_id = %s
+            """,
+            (term_id,),
         ).fetchall()
 
         for row in rows:
             class_id = str(row[0])
             document = {
-                "term_id": row[1],
-                "number": row[2],
-                "note": row[3],
-                "meet_type": row[4],
-                "course_code": row[5],
-                "course_code_prefix": row[6],
-                "course_level": row[7],
-                "course_is_lab": row[8],
-                "course_name": row[9],
-                "course_description": row[10],
-                "course_prerequisites": row[11],
-                "course_credits": row[12],
-                "course_department": row[13],
-                "course_words": row[14],
-                "course_gen_eds": row[15],
-                "course_quest": row[16],
-                "course_is_ai": row[17],
-                "course_is_honors": row[18],
-                "meet_times": row[19],
-                "instructors": row[20],
+                "term_id": term_id,
+                "number": row[1],
+                "note": row[2],
+                "meet_type": row[3],
+                "course_code": row[4],
+                "course_code_prefix": row[5],
+                "course_level": row[6],
+                "course_is_lab": row[7],
+                "course_name": row[8],
+                "course_description": row[9],
+                "course_prerequisites": row[10],
+                "course_credits": row[11],
+                "course_department": row[12],
+                "course_words": row[13],
+                "course_gen_eds": row[14],
+                "course_quest": row[15],
+                "course_is_ai": row[16],
+                "course_is_honors": row[17],
+                "meet_times": row[18],
+                "instructors": row[19],
             }
 
             actions.append(
@@ -210,9 +249,17 @@ def main() -> None:
             "or the ELASTICSEARCH_URL environment variable"
         )
 
+    if not 0 <= args.year <= 99:
+        raise ValueError("year must be between 00 and 99")
+
     es_client = Elasticsearch(args.elasticsearch_url)
 
-    sync(database_url=args.database_url, es_client=es_client)
+    sync(
+        database_url=args.database_url,
+        es_client=es_client,
+        term=args.term,
+        year=args.year,
+    )
 
 
 if __name__ == "__main__":
