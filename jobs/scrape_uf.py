@@ -278,7 +278,7 @@ def upsert_course(
 
     credits_max = float(first_section["credits_max"])
 
-    gen_eds = [value for section in sections for value in section["genEd"]]
+    gen_eds = list({value for section in sections for value in section["genEd"]})
 
     quest_values = [
         parse_quest(section["quest"]) for section in sections if section["quest"]
