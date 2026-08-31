@@ -2,10 +2,10 @@ import argparse
 import logging
 import os
 
-from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk, scan
 import psycopg
 from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk, scan
 
 load_dotenv()
 
@@ -36,10 +36,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sync(
-    database_url: str,
-    es_client: Elasticsearch
-) -> None:
+def sync(database_url: str, es_client: Elasticsearch) -> None:
     logger.info("Starting Elasticsearch sync")
 
     es_ids = {doc["_id"] for doc in scan(es_client, index="classes")}
@@ -170,20 +167,24 @@ def sync(
                 "instructors": row[20],
             }
 
-            actions.append({
-                "_index": "classes",
-                "_id": class_id,
-                "_source": document,
-            })
+            actions.append(
+                {
+                    "_index": "classes",
+                    "_id": class_id,
+                    "_source": document,
+                }
+            )
             db_ids.add(class_id)
 
     deleted_ids = es_ids - db_ids
     for class_id in deleted_ids:
-        actions.append({
-            "_op_type": "delete",
-            "_index": "classes",
-            "_id": class_id,
-        })
+        actions.append(
+            {
+                "_op_type": "delete",
+                "_index": "classes",
+                "_id": class_id,
+            }
+        )
 
     success, failed = bulk(
         es_client,
@@ -211,10 +212,7 @@ def main() -> None:
 
     es_client = Elasticsearch(args.elasticsearch_url)
 
-    sync(
-        database_url=args.database_url,
-        es_client=es_client
-    )
+    sync(database_url=args.database_url, es_client=es_client)
 
 
 if __name__ == "__main__":
