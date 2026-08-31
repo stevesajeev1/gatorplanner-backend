@@ -74,13 +74,7 @@ def sync(
         for doc in scan(
             es_client,
             index="classes",
-            query={
-                "query": {
-                    "term": {
-                        "term_id": term_id
-                    }
-                }
-            },
+            query={"query": {"term": {"term_id": term_id}}},
         )
     }
 
@@ -184,7 +178,7 @@ def sync(
 
             WHERE cl.term_id = %s
             """,
-            (term_id,)
+            (term_id,),
         ).fetchall()
 
         for row in rows:
