@@ -6,9 +6,12 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/config"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/logger"
 )
 
@@ -16,15 +19,17 @@ func Run() {
 	logger := logger.New()
 	config := config.LoadConfig()
 
-	es, err := elasticsearch.NewTyped(
-		elasticsearch.WithAddresses(config.ElasticsearchURL),
-	)
-	if err != nil {
-		logger.Fatal().Msg("Failed to connect to Elasticsearch")
-	}
-	defer es.Close(context.Background())
+	// Initialize dependencies
+	db := dependencies.NewDB(config.DatabaseURL)
+	defer db.Close()
 
+	es := dependencies.NewES(config.ElasticsearchURL)
+	defer es.Close()
+
+	// Router
 	r := chi.NewRouter()
+
+	r.Use(middleware.Logger)
 
 	humaConfig := huma.DefaultConfig("GatorPlanner API", "1.0.0")
 	humaConfig.DocsRenderer = huma.DocsRendererScalar
@@ -33,11 +38,13 @@ func Run() {
 	api := humachi.New(r, humaConfig)
 
 	// Repositories Setup
-	classesDBRepo := repository.NewClassesDBRepo(db)
-	classesESRepo := repository.NewClassesESRepo(es)
+	classesESRepo := elasticsearch.NewClassesESRepository(es)
 
 	// Routes registration
-	// classesService := classes.NewService()
+	classesService := classes.NewService(classesESRepo, logger)
+	classesHandler := classes.NewHandler(classesService, logger)
+	classes.RegisterRoutes(classesHandler, huma.NewGroup(api, "/term/{termID}/classes"))
+
 	huma.Register(api, huma.Operation{
 		OperationID: "ping",
 		Method:      http.MethodGet,
@@ -53,6 +60,6 @@ func Run() {
 
 	logger.Info().Msgf("API listening on port %s", config.Port)
 	if err := http.ListenAndServe(":"+config.Port, r); err != nil {
-		logger.Fatal().Msg("Failed to start server.")
+		logger.Panic().Msg("Failed to start server.")
 	}
 }
