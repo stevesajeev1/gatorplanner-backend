@@ -23,5 +23,5 @@ func NewES(connStr string) *ES {
 }
 
 func (e *ES) Close() {
-	e.TypedClient.Close(context.Background())
+	_ = e.TypedClient.Close(context.Background())
 }

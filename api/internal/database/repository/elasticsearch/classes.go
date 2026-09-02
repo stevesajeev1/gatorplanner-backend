@@ -322,7 +322,7 @@ func (r *ClassesESRepository) Search(
 		).
 		Do(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Elasticsearch search: %w", err)
+		return nil, fmt.Errorf("elasticsearch search: %w", err)
 	}
 
 	out := make([]SearchClassResult, len(results.Hits.Hits))

@@ -6,7 +6,7 @@ export
 lint:
 	go tool golangci-lint run
 
-lint:
+lint-fix:
 	go tool golangci-lint run --fix
 
 fmt:
