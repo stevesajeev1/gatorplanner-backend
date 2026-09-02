@@ -104,7 +104,7 @@ def sync(
 
                 d.name AS course_department,
                 c.words AS course_words,
-                c.gen_eds AS course_gen_eds,
+                to_jsonb(c.gen_eds) AS course_gen_eds,
                 c.quest AS course_quest,
                 c.is_ai AS course_is_ai,
                 c.is_honors AS course_is_honors,
@@ -114,32 +114,31 @@ def sync(
                         SELECT jsonb_agg(
                             jsonb_build_object(
                                 'days', cmt.days,
-                                'time', jsonb_build_object(
-                                    'gte',
-                                        EXTRACT(HOUR FROM cmt.time_begin)::integer * 60
-                                        + EXTRACT(MINUTE FROM cmt.time_begin)::integer,
-                                    'lte',
-                                        EXTRACT(HOUR FROM cmt.time_end)::integer * 60
-                                        + EXTRACT(MINUTE FROM cmt.time_end)::integer
-                                ),
-                                'period', jsonb_build_object(
-                                    'gte',
-                                    CASE
-                                        WHEN cmt.period_begin LIKE 'E%'
-                                            THEN 11 + substring(
-                                                cmt.period_begin FROM 2
-                                            )::integer
-                                        ELSE NULLIF(cmt.period_begin, '')::integer
-                                    END,
-                                    'lte',
-                                    CASE
-                                        WHEN cmt.period_end LIKE 'E%'
-                                            THEN 11 + substring(
-                                                cmt.period_end FROM 2
-                                            )::integer
-                                        ELSE NULLIF(cmt.period_end, '')::integer
-                                    END
-                                ),
+
+                                'time_start',
+                                    EXTRACT(HOUR FROM cmt.time_begin)::integer * 60
+                                    + EXTRACT(MINUTE FROM cmt.time_begin)::integer,
+                                'time_end',
+                                    EXTRACT(HOUR FROM cmt.time_end)::integer * 60
+                                    + EXTRACT(MINUTE FROM cmt.time_end)::integer,
+
+                                'period_start',
+                                CASE
+                                    WHEN cmt.period_begin LIKE 'E%%'
+                                        THEN 11 + substring(
+                                            cmt.period_begin FROM 2
+                                        )::integer
+                                    ELSE NULLIF(cmt.period_begin, '')::integer
+                                END,
+                                'period_end',
+                                CASE
+                                    WHEN cmt.period_end LIKE 'E%%'
+                                        THEN 11 + substring(
+                                            cmt.period_end FROM 2
+                                        )::integer
+                                    ELSE NULLIF(cmt.period_end, '')::integer
+                                END,
+
                                 'building', cmt.building
                             )
                         )

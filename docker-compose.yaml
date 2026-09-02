@@ -7,6 +7,9 @@ services:
       - ./api:/app
     ports:
       - 8080:8080
+    depends_on:
+      - postgres
+      - elasticsearch
 
   postgres:
     image: postgres:18.4

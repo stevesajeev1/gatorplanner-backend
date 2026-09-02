@@ -4,7 +4,7 @@
     "number_of_replicas": 0,
     "analysis": {
       "analyzer": {
-        "class_text": {
+        "text_search": {
           "type": "custom",
           "tokenizer": "standard",
           "filter": [
@@ -26,7 +26,7 @@
       },
       "note": {
         "type": "text",
-        "analyzer": "class_text"
+        "analyzer": "text_search"
       },
       "meet_type": {
         "type": "keyword"
@@ -50,21 +50,27 @@
       },
       "course_name": {
         "type": "text",
-        "analyzer": "class_text"
+        "analyzer": "text_search",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
       },
       "course_description": {
         "type": "text",
-        "analyzer": "class_text"
+        "analyzer": "text_search"
       },
       "course_prerequisites": {
         "type": "text",
-        "analyzer": "class_text"
+        "analyzer": "text_search"
       },
       "course_credits": {
         "type": "double_range"
       },
       "course_department": {
         "type": "text",
+        "analyzer": "text_search",
         "fields": {
           "keyword": {
             "type": "keyword"
@@ -75,10 +81,22 @@
         "type": "integer"
       },
       "course_gen_eds": {
-        "type": "keyword"
+        "type": "text",
+        "analyzer": "text_search",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
       },
       "course_quest": {
-        "type": "keyword"
+        "type": "text",
+        "analyzer": "text_search",
+        "fields": {
+          "keyword": {
+            "type": "keyword"
+          }
+        }
       },
       "course_is_ai": {
         "type": "boolean"
@@ -92,14 +110,21 @@
           "days": {
             "type": "keyword"
           },
-          "time": {
-            "type": "integer_range"
+          "time_start": {
+            "type": "integer"
           },
-          "period": {
-            "type": "integer_range"
+          "time_end": {
+            "type": "integer"
+          },
+          "period_start": {
+            "type": "integer"
+          },
+          "period_end": {
+            "type": "integer"
           },
           "building": {
             "type": "text",
+            "analyzer": "text_search",
             "fields": {
               "keyword": {
                 "type": "keyword"
@@ -113,7 +138,7 @@
         "properties": {
           "name": {
             "type": "text",
-            "analyzer": "class_text",
+            "analyzer": "text_search",
             "fields": {
               "keyword": {
                 "type": "keyword"

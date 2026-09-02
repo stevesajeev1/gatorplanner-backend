@@ -46,13 +46,13 @@ create table courses (
 
     code_prefix text generated always as (
         substring(code from '^[A-Za-z]+')
-    ) virtual,
+    ) stored,
     level integer generated always as (
         substring(code from '[0-9]+L?$')::integer
-    ) virtual,
+    ) stored,
     is_lab boolean generated always as (
         code ~ 'L$'
-    ) virtual,
+    ) stored,
 
     name text not null,
     description text not null,

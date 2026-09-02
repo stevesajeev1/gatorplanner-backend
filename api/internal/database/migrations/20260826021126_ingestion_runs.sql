@@ -24,12 +24,12 @@ alter table courses add column credits_type course_credits_type generated always
     end
 ) stored;
 
--- fix incorrect level virtual column
+-- fix incorrect level generated column
 alter table courses drop column level;
 
 alter table courses add column level integer generated always as (
     substring(code, '[0-9]+')::integer
-) virtual;
+) stored;
 
 -- fix period column
 alter table class_meet_times drop constraint period_end_after_begin;
@@ -61,7 +61,7 @@ alter table courses drop column level;
 
 alter table courses add column level integer generated always as (
     substring(code, '[0-9]+L?$')::integer
-) virtual;
+) stored;
 
 -- will round credits if fractional
 alter table courses drop column credits_type;
