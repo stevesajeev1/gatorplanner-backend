@@ -1,10 +1,13 @@
 -include .env
 export
 
-.PHONY: lint fmt migrate-up migrate-down migrate-create generate
+.PHONY: lint lint-fix fmt migrate-up migrate-down migrate-create generate
 
 lint:
 	go tool golangci-lint run
+
+lint:
+	go tool golangci-lint run --fix
 
 fmt:
 	go fmt ./...

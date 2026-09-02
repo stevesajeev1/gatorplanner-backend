@@ -1,0 +1,34 @@
+name: API Linting/Formatting
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/api-styling.yml"
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+
+      - name: Check linting
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: api
+
+      - name: Check formatting
+        working-directory: api
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "$files"
+            exit 1
+          fi
