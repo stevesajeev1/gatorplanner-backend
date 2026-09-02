@@ -12,6 +12,7 @@ import (
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/logger"
 )
 
@@ -36,6 +37,10 @@ func Run() {
 	humaConfig.CreateHooks = nil
 
 	api := humachi.New(r, humaConfig)
+
+	// Custom schemas
+	schemaRegistry := api.OpenAPI().Components.Schemas
+	search.RegisterCustomSchemas(schemaRegistry)
 
 	// Repositories Setup
 	classesESRepo := elasticsearch.NewClassesESRepository(es)
