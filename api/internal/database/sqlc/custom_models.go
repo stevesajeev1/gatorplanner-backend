@@ -33,6 +33,7 @@ type CustomInstructor struct {
 
 type TypedSearchClassesRow struct {
 	SearchClassesRow
+	ID            string              `json:"id"`
 	CourseCredits CustomCourseCredits `json:"course_credits"`
 	CourseGenEds  []GenEd             `json:"course_gen_eds"`
 	CourseQuest   *Quest              `json:"course_quest"`

@@ -7,10 +7,13 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const searchClasses = `-- name: SearchClasses :many
 SELECT
+    cl.id,
     cl.number,
     cl.note,
     cl.meet_type,
@@ -100,6 +103,7 @@ JOIN departments d
 `
 
 type SearchClassesRow struct {
+	ID                  pgtype.UUID   `json:"id"`
 	Number              int32         `json:"number"`
 	Note                *string       `json:"note"`
 	MeetType            ClassMeetType `json:"meet_type"`
@@ -128,6 +132,7 @@ func (q *Queries) SearchClasses(ctx context.Context) ([]SearchClassesRow, error)
 	for rows.Next() {
 		var i SearchClassesRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.Number,
 			&i.Note,
 			&i.MeetType,

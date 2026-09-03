@@ -348,6 +348,8 @@ func (r *ClassesESRepository) Search(
 			if err := json.Unmarshal(classHit.Source_, &out[i].Classes[j]); err != nil {
 				return nil, fmt.Errorf("unmarshal class: %w", err)
 			}
+
+			out[i].Classes[j].ID = *classHit.Id_
 		}
 	}
 	return out, nil
