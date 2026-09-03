@@ -3,6 +3,7 @@ package classes
 import (
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/shared"
 )
 
 type SearchClassesRequest struct {
@@ -19,5 +20,5 @@ func (r *SearchClassesRequest) Validate() error {
 }
 
 type SearchClassesResponse struct {
-	Body []elasticsearch.SearchClassResult
+	Body shared.PaginatedResponse[elasticsearch.SearchClassResultItem]
 }

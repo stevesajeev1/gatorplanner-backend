@@ -282,6 +282,11 @@ func wrapNestedQuery(field search.Field, query types.QueryVariant) types.QueryVa
 }
 
 type SearchClassResult struct {
+	Total uint
+	Items []SearchClassResultItem
+}
+
+type SearchClassResultItem struct {
 	CourseCode string                       `json:"course_code"`
 	Classes    []sqlc.TypedSearchClassesRow `json:"classes"`
 }
@@ -291,7 +296,9 @@ func (r *ClassesESRepository) Search(
 	termID int64,
 	search *string,
 	filter *search.Filter,
-) ([]SearchClassResult, error) {
+	limit uint,
+	offset uint,
+) (*SearchClassResult, error) {
 	query := esdsl.NewBoolQuery()
 
 	if search != nil {
@@ -309,9 +316,6 @@ func (r *ClassesESRepository) Search(
 		query = query.Filter(termFilter)
 	}
 
-	data, _ := query.QueryCaster().MarshalJSON()
-	fmt.Println(string(data))
-
 	results, err := r.es.Search().
 		Index("classes").
 		Query(query).
@@ -320,14 +324,23 @@ func (r *ClassesESRepository) Search(
 				Field("course_code.keyword").
 				InnerHits(esdsl.NewInnerHits().Name("classes").Size(100)),
 		).
+		From(int(offset)).
+		Size(int(limit)).
+		AddAggregation(
+			"total_courses",
+			esdsl.NewCardinalityAggregation().
+				Field("course_code.keyword"),
+		).
 		Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("elasticsearch search: %w", err)
 	}
 
-	out := make([]SearchClassResult, len(results.Hits.Hits))
+	total := uint(results.Aggregations["total_courses"].(*types.CardinalityAggregate).Value)
+
+	items := make([]SearchClassResultItem, len(results.Hits.Hits))
 	for i, hit := range results.Hits.Hits {
-		out[i] = SearchClassResult{}
+		items[i] = SearchClassResultItem{}
 
 		var course struct {
 			CourseCode string `json:"course_code"`
@@ -335,22 +348,25 @@ func (r *ClassesESRepository) Search(
 		if err := json.Unmarshal(hit.Source_, &course); err != nil {
 			return nil, fmt.Errorf("unmarshal course: %w", err)
 		}
-		out[i].CourseCode = course.CourseCode
+		items[i].CourseCode = course.CourseCode
 
 		innerHits, ok := hit.InnerHits["classes"]
 		if !ok {
 			continue
 		}
 
-		out[i].Classes = make([]sqlc.TypedSearchClassesRow, len(innerHits.Hits.Hits))
+		items[i].Classes = make([]sqlc.TypedSearchClassesRow, len(innerHits.Hits.Hits))
 
 		for j, classHit := range innerHits.Hits.Hits {
-			if err := json.Unmarshal(classHit.Source_, &out[i].Classes[j]); err != nil {
+			if err := json.Unmarshal(classHit.Source_, &items[i].Classes[j]); err != nil {
 				return nil, fmt.Errorf("unmarshal class: %w", err)
 			}
 
-			out[i].Classes[j].ID = *classHit.Id_
+			items[i].Classes[j].ID = *classHit.Id_
 		}
 	}
-	return out, nil
+	return &SearchClassResult{
+		Total: total,
+		Items: items,
+	}, nil
 }

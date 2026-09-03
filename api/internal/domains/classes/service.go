@@ -31,15 +31,17 @@ func (s *ClassesService) Search(
 	ctx context.Context,
 	termID int64,
 	request *SearchClassesRequest,
-) ([]elasticsearch.SearchClassResult, error) {
+	limit uint,
+	offset uint,
+) (*elasticsearch.SearchClassResult, error) {
 	if err := request.Validate(); err != nil {
 		return nil, err
 	}
 
-	classes, err := s.classesESRepo.Search(ctx, termID, request.Search, request.Filter)
+	search, err := s.classesESRepo.Search(ctx, termID, request.Search, request.Filter, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	return classes, nil
+	return search, nil
 }
