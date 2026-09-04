@@ -124,25 +124,32 @@ def sync(
 
                                 'period_start',
                                 CASE
-                                    WHEN cmt.period_begin LIKE 'E%%'
+                                    WHEN cmt.period_begin::text LIKE 'E%%'
                                         THEN 11 + substring(
-                                            cmt.period_begin FROM 2
+                                            cmt.period_begin::text FROM 2
                                         )::integer
-                                    ELSE NULLIF(cmt.period_begin, '')::integer
+                                    ELSE NULLIF(cmt.period_begin::text, '')::integer
                                 END,
                                 'period_end',
                                 CASE
-                                    WHEN cmt.period_end LIKE 'E%%'
+                                    WHEN cmt.period_end::text LIKE 'E%%'
                                         THEN 11 + substring(
-                                            cmt.period_end FROM 2
+                                            cmt.period_end::text FROM 2
                                         )::integer
-                                    ELSE NULLIF(cmt.period_end, '')::integer
+                                    ELSE NULLIF(cmt.period_end::text, '')::integer
                                 END,
 
-                                'building', cmt.building
+                                'building',
+                                CASE
+                                    WHEN cmt.room IS NOT NULL
+                                        THEN b.name || ' ' || cmt.room
+                                    ELSE b.code
+                                END
                             )
                         )
                         FROM class_meet_times cmt
+                        LEFT JOIN buildings b
+                            ON b.id = cmt.building_id
                         WHERE cmt.class_id = cl.id
                     ),
                     '[]'::jsonb
