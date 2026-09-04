@@ -213,7 +213,9 @@ def parse_words(section: dict) -> int:
         raise ValueError(f"Invalid grWriting value: {value!r}") from exc
 
 
-def parse_times_periods(meet_time: dict[str, Any], term_id: int) -> tuple[time, time, str, str] | tuple[None, None, None, None]:
+def parse_times_periods(
+    meet_time: dict[str, Any], term_id: int
+) -> tuple[time, time, str, str] | tuple[None, None, None, None]:
     time_begin = parse_time(meet_time["meetTimeBegin"])
     time_end = parse_time(meet_time["meetTimeEnd"])
     period_begin = meet_time["meetPeriodBegin"]
@@ -269,6 +271,7 @@ SUMMER_PERIOD_STARTS = {
     time(20, 30): "E2",
 }
 
+
 def parse_period(time_: time, summer: bool) -> str:
     PERIOD_STARTS = SUMMER_PERIOD_STARTS if summer else FALL_SPRING_PERIOD_STARTS
 
@@ -278,7 +281,9 @@ def parse_period(time_: time, summer: bool) -> str:
     raise ValueError(f"Time {time_} is before the first period")
 
 
-def upsert_building(conn: psycopg.Connection, meet_time: dict[str, Any]) -> tuple[str, str | None] | tuple[None, None]:
+def upsert_building(
+    conn: psycopg.Connection, meet_time: dict[str, Any]
+) -> tuple[str, str | None] | tuple[None, None]:
     name = meet_time["meetBuilding"].strip()
     code = meet_time["meetBldgCode"].strip()
     if not name and not code:
@@ -529,10 +534,7 @@ def upsert_class(
 
 
 def update_class_meet_times(
-    conn: psycopg.Connection,
-    section: dict[str, Any],
-    class_id: str,
-    term_id: int
+    conn: psycopg.Connection, section: dict[str, Any], class_id: str, term_id: int
 ) -> None:
     conn.execute(
         """
@@ -567,8 +569,8 @@ def update_class_meet_times(
                 int(meet_time["meetNo"]),
                 meet_time["meetDays"],
                 *parse_times_periods(meet_time, term_id),
-                *upsert_building(conn, meet_time)
-            )
+                *upsert_building(conn, meet_time),
+            ),
         )
 
 
