@@ -12,7 +12,10 @@ func RegisterCustomSchemas(r huma.Registry) {
 	r.Map()["FilterRuleTextCourseMeetDays"] = (Rule{}).CourseMeetDaysTextSchema(r)
 	r.Map()["FilterRuleTextGeneralField"] = (Rule{}).GeneralTextSchema(r)
 	r.Map()["FilterRuleText"] = (Rule{}).TextSchema(r)
+	r.Map()["FilterRuleNumberPeriod"] = (Rule{}).PeriodNumberSchema(r)
+	r.Map()["FilterRuleNumberGeneralField"] = (Rule{}).GeneralNumberSchema(r)
 	r.Map()["FilterRuleNumber"] = (Rule{}).NumberSchema(r)
+	r.Map()["FilterRuleTime"] = (Rule{}).TimeSchema(r)
 	r.Map()["FilterRuleBoolean"] = (Rule{}).BooleanSchema(r)
 	r.Map()["FilterRule"] = (Rule{}).Schema(r)
 	r.Map()["Filter"] = (Filter{}).Schema(r)
@@ -189,13 +192,43 @@ func (Rule) TextSchema(r huma.Registry) *huma.Schema {
 	}
 }
 
-func (Rule) NumberSchema(r huma.Registry) *huma.Schema {
+func (Rule) PeriodNumberSchema(r huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		Type: huma.TypeObject,
 		Properties: map[string]*huma.Schema{
 			"field": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidNumberFields),
+				Enum: []any{string(FieldCourseMeetPeriodStart), string(FieldCourseMeetPeriodEnd)},
+			},
+			"type": {
+				Type: huma.TypeString,
+				Enum: []any{string(FieldTypeNumber)},
+			},
+			"filter": {
+				Type: huma.TypeString,
+				Enum: anyStringSlice(ValidNumberFilters),
+			},
+			"value": {
+				Type: huma.TypeString,
+				Enum: anyStringSlice(sqlc.ValidPeriods),
+			},
+		},
+		Required: []string{
+			"field",
+			"type",
+			"filter",
+			"value",
+		},
+	}
+}
+
+func (Rule) GeneralNumberSchema(r huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		Type: huma.TypeObject,
+		Properties: map[string]*huma.Schema{
+			"field": {
+				Type: huma.TypeString,
+				Enum: anyStringSlice(ValidGeneralNumberFields),
 			},
 			"type": {
 				Type: huma.TypeString,
@@ -207,6 +240,49 @@ func (Rule) NumberSchema(r huma.Registry) *huma.Schema {
 			},
 			"value": {
 				Type: huma.TypeNumber,
+			},
+		},
+		Required: []string{
+			"field",
+			"type",
+			"filter",
+			"value",
+		},
+	}
+}
+
+func (Rule) NumberSchema(r huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		OneOf: []*huma.Schema{
+			{
+				Ref: "#/components/schemas/FilterRuleNumberPeriod",
+			},
+			{
+				Ref: "#/components/schemas/FilterRuleNumberGeneralField",
+			},
+		},
+	}
+}
+
+func (Rule) TimeSchema(r huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		Type: huma.TypeObject,
+		Properties: map[string]*huma.Schema{
+			"field": {
+				Type: huma.TypeString,
+				Enum: anyStringSlice(ValidTimeFields),
+			},
+			"type": {
+				Type: huma.TypeString,
+				Enum: []any{string(FieldTypeTime)},
+			},
+			"filter": {
+				Type: huma.TypeString,
+				Enum: anyStringSlice(ValidNumberFilters),
+			},
+			"value": {
+				Type:   huma.TypeString,
+				Format: "time",
 			},
 		},
 		Required: []string{
@@ -255,6 +331,9 @@ func (Rule) Schema(r huma.Registry) *huma.Schema {
 			},
 			{
 				Ref: "#/components/schemas/FilterRuleNumber",
+			},
+			{
+				Ref: "#/components/schemas/FilterRuleTime",
 			},
 			{
 				Ref: "#/components/schemas/FilterRuleBoolean",

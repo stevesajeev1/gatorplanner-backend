@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -191,6 +192,60 @@ func (ns NullMeetDayType) Value() (driver.Value, error) {
 	return string(ns.MeetDayType), nil
 }
 
+type Period string
+
+const (
+	Period1  Period = "1"
+	Period2  Period = "2"
+	Period3  Period = "3"
+	Period4  Period = "4"
+	Period5  Period = "5"
+	Period6  Period = "6"
+	Period7  Period = "7"
+	Period8  Period = "8"
+	Period9  Period = "9"
+	Period10 Period = "10"
+	Period11 Period = "11"
+	PeriodE1 Period = "E1"
+	PeriodE2 Period = "E2"
+	PeriodE3 Period = "E3"
+)
+
+func (e *Period) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Period(s)
+	case string:
+		*e = Period(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Period: %T", src)
+	}
+	return nil
+}
+
+type NullPeriod struct {
+	Period Period `json:"period"`
+	Valid  bool   `json:"valid"` // Valid is true if Period is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPeriod) Scan(value interface{}) error {
+	if value == nil {
+		ns.Period, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Period.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPeriod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Period), nil
+}
+
 type Quest string
 
 const (
@@ -235,8 +290,14 @@ func (ns NullQuest) Value() (driver.Value, error) {
 	return string(ns.Quest), nil
 }
 
+type Building struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	Code string    `json:"code"`
+}
+
 type Class struct {
-	ID             pgtype.UUID   `json:"id"`
+	ID             uuid.UUID     `json:"id"`
 	CourseID       int32         `json:"course_id"`
 	TermID         int32         `json:"term_id"`
 	Number         int32         `json:"number"`
@@ -246,20 +307,21 @@ type Class struct {
 }
 
 type ClassInstructor struct {
-	ClassID      pgtype.UUID `json:"class_id"`
-	InstructorID pgtype.UUID `json:"instructor_id"`
+	ClassID      uuid.UUID `json:"class_id"`
+	InstructorID uuid.UUID `json:"instructor_id"`
 }
 
 type ClassMeetTime struct {
-	ID          pgtype.UUID   `json:"id"`
-	ClassID     pgtype.UUID   `json:"class_id"`
+	ID          uuid.UUID     `json:"id"`
+	ClassID     uuid.UUID     `json:"class_id"`
 	Number      int32         `json:"number"`
 	Days        []MeetDayType `json:"days"`
 	TimeBegin   pgtype.Time   `json:"time_begin"`
 	TimeEnd     pgtype.Time   `json:"time_end"`
-	PeriodBegin string        `json:"period_begin"`
-	PeriodEnd   string        `json:"period_end"`
-	Building    string        `json:"building"`
+	PeriodBegin Period        `json:"period_begin"`
+	PeriodEnd   Period        `json:"period_end"`
+	BuildingID  pgtype.UUID   `json:"building_id"`
+	Room        *string       `json:"room"`
 }
 
 type Course struct {
@@ -274,7 +336,7 @@ type Course struct {
 	Prerequisites  string                `json:"prerequisites"`
 	CreditsMin     pgtype.Numeric        `json:"credits_min"`
 	CreditsMax     pgtype.Numeric        `json:"credits_max"`
-	DepartmentID   pgtype.UUID           `json:"department_id"`
+	DepartmentID   uuid.UUID             `json:"department_id"`
 	Words          int32                 `json:"words"`
 	GenEds         []GenEd               `json:"gen_eds"`
 	Quest          NullQuest             `json:"quest"`
@@ -286,19 +348,19 @@ type Course struct {
 }
 
 type Department struct {
-	ID   pgtype.UUID `json:"id"`
-	Code int32       `json:"code"`
-	Name string      `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Code int32     `json:"code"`
+	Name string    `json:"name"`
 }
 
 type IngestionRun struct {
-	ID        pgtype.UUID        `json:"id"`
+	ID        uuid.UUID          `json:"id"`
 	TermID    int32              `json:"term_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Instructor struct {
-	ID         pgtype.UUID        `json:"id"`
+	ID         uuid.UUID          `json:"id"`
 	Name       string             `json:"name"`
 	RmpID      *int32             `json:"rmp_id"`
 	Rating     pgtype.Numeric     `json:"rating"`

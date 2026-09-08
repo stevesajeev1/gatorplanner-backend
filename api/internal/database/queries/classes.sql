@@ -1,61 +1,30 @@
--- name: SearchClasses :many
+-- name: ListClassesByID :many
 SELECT
-    cl.id,
     cl.number,
     cl.note,
     cl.meet_type,
-
-    c.is_lab AS course_is_lab,
-    c.name AS course_name,
-    c.description AS course_description,
-    c.prerequisites AS course_prerequisites,
-
-    jsonb_build_object(
-        'gte', c.credits_min,
-        'lte', c.credits_max
-    ) AS course_credits,
-
-    d.name AS course_department,
-    c.words AS course_words,
-    to_jsonb(c.gen_eds) AS course_gen_eds,
-    c.quest AS course_quest,
-    c.is_ai AS course_is_ai,
-    c.is_honors AS course_is_honors,
 
     COALESCE(
         (
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'days', cmt.days,
-
-                    'time_start',
-                        EXTRACT(HOUR FROM cmt.time_begin)::integer * 60
-                        + EXTRACT(MINUTE FROM cmt.time_begin)::integer,
-                    'time_end',
-                        EXTRACT(HOUR FROM cmt.time_end)::integer * 60
-                        + EXTRACT(MINUTE FROM cmt.time_end)::integer,
-
-                    'period_start',
+                    'time_start', cmt.time_begin,
+                    'time_end', cmt.time_end,
+                    'period_start', cmt.period_begin,
+                    'period_end', cmt.period_end,
+                    'building',
                     CASE
-                        WHEN cmt.period_begin LIKE 'E%%'
-                            THEN 11 + substring(
-                                cmt.period_begin FROM 2
-                            )::integer
-                        ELSE NULLIF(cmt.period_begin, '')::integer
-                    END,
-                    'period_end',
-                    CASE
-                        WHEN cmt.period_end LIKE 'E%%'
-                            THEN 11 + substring(
-                                cmt.period_end FROM 2
-                            )::integer
-                        ELSE NULLIF(cmt.period_end, '')::integer
-                    END,
-
-                    'building', cmt.building
+                        WHEN cmt.room IS NOT NULL
+                            AND cmt.room <> ''
+                        THEN b.name || ' ' || cmt.room
+                        ELSE b.code
+                    END
                 )
             )
             FROM class_meet_times cmt
+            LEFT JOIN buildings b
+                ON b.id = cmt.building_id
             WHERE cmt.class_id = cl.id
         ),
         '[]'::jsonb
@@ -79,11 +48,7 @@ SELECT
         '[]'::jsonb
     ) AS instructors
 
-FROM classes cl
-
-JOIN courses c
-    ON c.id = cl.course_id
-    AND c.term_id = cl.term_id
-
-JOIN departments d
-    ON d.id = c.department_id;
+FROM unnest(@ids::uuid[]) WITH ORDINALITY AS ids(id, ord)
+JOIN classes cl
+    ON cl.id = ids.id
+ORDER BY ids.ord;

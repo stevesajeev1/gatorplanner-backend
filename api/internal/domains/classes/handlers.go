@@ -31,17 +31,19 @@ func (h *handler) searchClasses(
 ) (*SearchClassesResponse, error) {
 	search, err := h.classesService.Search(ctx, input.TermID, &input.Body, input.Limit, input.Offset)
 	if err != nil {
-		return nil, classesHTTPError(err, "Failed to search classes")
+		return nil, h.classesHTTPError(err, "Failed to search classes")
 	}
 	return &SearchClassesResponse{
 		Body: shared.Paginate(search.Items, search.Total, input.Limit, input.Offset),
 	}, nil
 }
 
-func classesHTTPError(err error, fallback string) error {
+func (h *handler) classesHTTPError(err error, fallback string) error {
 	if errors.Is(err, ErrSearchClassesSearchOrFilterRequired) {
 		return huma.Error400BadRequest(err.Error())
 	}
 
-	return huma.Error500InternalServerError(fallback)
+	h.logger.Warn().Err(err).Msg("")
+	return huma.Error500InternalServerError(err.Error())
+	// return huma.Error500InternalServerError(fallback)
 }
