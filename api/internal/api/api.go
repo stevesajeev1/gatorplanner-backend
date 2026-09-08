@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/config"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes"
@@ -43,10 +44,13 @@ func Run() {
 	search.RegisterCustomSchemas(schemaRegistry)
 
 	// Repositories Setup
+	coursesDBRepo := database.NewCoursesRepository(db)
+	classesDBRepo := database.NewClassesRepository(db)
+
 	classesESRepo := elasticsearch.NewClassesESRepository(es)
 
 	// Routes registration
-	classesService := classes.NewService(classesESRepo, logger)
+	classesService := classes.NewService(coursesDBRepo, classesDBRepo, classesESRepo, logger)
 	classesHandler := classes.NewHandler(classesService, logger)
 	classes.RegisterRoutes(classesHandler, huma.NewGroup(api, "/term/{termID}/classes"))
 

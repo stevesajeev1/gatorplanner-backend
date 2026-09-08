@@ -89,6 +89,7 @@ def sync(
                 cl.note,
                 cl.meet_type,
 
+                c.id AS course_id,
                 c.code AS course_code,
                 c.code_prefix AS course_code_prefix,
                 c.level AS course_level,
@@ -124,25 +125,32 @@ def sync(
 
                                 'period_start',
                                 CASE
-                                    WHEN cmt.period_begin LIKE 'E%%'
+                                    WHEN cmt.period_begin::text LIKE 'E%%'
                                         THEN 11 + substring(
-                                            cmt.period_begin FROM 2
+                                            cmt.period_begin::text FROM 2
                                         )::integer
-                                    ELSE NULLIF(cmt.period_begin, '')::integer
+                                    ELSE NULLIF(cmt.period_begin::text, '')::integer
                                 END,
                                 'period_end',
                                 CASE
-                                    WHEN cmt.period_end LIKE 'E%%'
+                                    WHEN cmt.period_end::text LIKE 'E%%'
                                         THEN 11 + substring(
-                                            cmt.period_end FROM 2
+                                            cmt.period_end::text FROM 2
                                         )::integer
-                                    ELSE NULLIF(cmt.period_end, '')::integer
+                                    ELSE NULLIF(cmt.period_end::text, '')::integer
                                 END,
 
-                                'building', cmt.building
+                                'building',
+                                CASE
+                                    WHEN cmt.room IS NOT NULL
+                                        THEN b.name || ' ' || cmt.room
+                                    ELSE b.code
+                                END
                             )
                         )
                         FROM class_meet_times cmt
+                        LEFT JOIN buildings b
+                            ON b.id = cmt.building_id
                         WHERE cmt.class_id = cl.id
                     ),
                     '[]'::jsonb
@@ -187,22 +195,23 @@ def sync(
                 "number": row[1],
                 "note": row[2],
                 "meet_type": row[3],
-                "course_code": row[4],
-                "course_code_prefix": row[5],
-                "course_level": row[6],
-                "course_is_lab": row[7],
-                "course_name": row[8],
-                "course_description": row[9],
-                "course_prerequisites": row[10],
-                "course_credits": row[11],
-                "course_department": row[12],
-                "course_words": row[13],
-                "course_gen_eds": row[14],
-                "course_quest": row[15],
-                "course_is_ai": row[16],
-                "course_is_honors": row[17],
-                "meet_times": row[18],
-                "instructors": row[19],
+                "course_id": row[4],
+                "course_code": row[5],
+                "course_code_prefix": row[6],
+                "course_level": row[7],
+                "course_is_lab": row[8],
+                "course_name": row[9],
+                "course_description": row[10],
+                "course_prerequisites": row[11],
+                "course_credits": row[12],
+                "course_department": row[13],
+                "course_words": row[14],
+                "course_gen_eds": row[15],
+                "course_quest": row[16],
+                "course_is_ai": row[17],
+                "course_is_honors": row[18],
+                "meet_times": row[19],
+                "instructors": row[20],
             }
 
             actions.append(

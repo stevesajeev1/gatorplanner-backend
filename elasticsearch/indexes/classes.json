@@ -31,6 +31,9 @@
       "meet_type": {
         "type": "keyword"
       },
+      "course_id": {
+        "type": "integer"
+      },
       "course_code": {
         "type": "text",
         "fields": {

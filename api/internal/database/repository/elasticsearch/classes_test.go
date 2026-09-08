@@ -207,54 +207,164 @@ func TestBuildBooleanRuleQuery_NotEqual(t *testing.T) {
 
 func TestBuildScalarNumberRuleQuery(t *testing.T) {
 	tests := []struct {
-		name   string
-		filter search.FieldFilter
-		want   string
+		name string
+		rule search.Rule
+		want string
 	}{
 		{
-			name:   "equal",
-			filter: search.FieldFilterEqual,
-			want:   `"value":3`,
+			name: "number equal",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterEqual,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"value":3`,
 		},
 		{
-			name:   "not equal",
-			filter: search.FieldFilterNotEqual,
-			want:   `"must_not"`,
+			name: "number not equal",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterNotEqual,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"must_not"`,
 		},
 		{
-			name:   "greater",
-			filter: search.FieldFilterGreater,
-			want:   `"gt":3`,
+			name: "number greater",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterGreater,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"gt":3`,
 		},
 		{
-			name:   "less",
-			filter: search.FieldFilterLess,
-			want:   `"lt":3`,
+			name: "number less",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterLess,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"lt":3`,
 		},
 		{
-			name:   "greater or equal",
-			filter: search.FieldFilterGreaterOrEqual,
-			want:   `"gte":3`,
+			name: "number greater or equal",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterGreaterOrEqual,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"gte":3`,
 		},
 		{
-			name:   "less or equal",
-			filter: search.FieldFilterLessOrEqual,
-			want:   `"lte":3`,
+			name: "number less or equal",
+			rule: search.Rule{
+				Field:       search.FieldInstructorRating,
+				Type:        search.FieldTypeNumber,
+				Filter:      search.FieldFilterLessOrEqual,
+				NumberValue: func() *float64 { v := float64(3); return &v }(),
+			},
+			want: `"lte":3`,
+		},
+		{
+			name: "period 1",
+			rule: search.Rule{
+				Field:     search.FieldCourseMeetPeriodStart,
+				Type:      search.FieldTypeNumber,
+				Filter:    search.FieldFilterEqual,
+				TextValue: func() *string { v := "1"; return &v }(),
+			},
+			want: `"value":1`,
+		},
+		{
+			name: "period 11",
+			rule: search.Rule{
+				Field:     search.FieldCourseMeetPeriodStart,
+				Type:      search.FieldTypeNumber,
+				Filter:    search.FieldFilterEqual,
+				TextValue: func() *string { v := "11"; return &v }(),
+			},
+			want: `"value":11`,
+		},
+		{
+			name: "evening period E1",
+			rule: search.Rule{
+				Field:     search.FieldCourseMeetPeriodStart,
+				Type:      search.FieldTypeNumber,
+				Filter:    search.FieldFilterEqual,
+				TextValue: func() *string { v := "E1"; return &v }(),
+			},
+			want: `"value":12`,
+		},
+		{
+			name: "evening period E2",
+			rule: search.Rule{
+				Field:     search.FieldCourseMeetPeriodEnd,
+				Type:      search.FieldTypeNumber,
+				Filter:    search.FieldFilterEqual,
+				TextValue: func() *string { v := "E2"; return &v }(),
+			},
+			want: `"value":13`,
+		},
+		{
+			name: "evening period E3",
+			rule: search.Rule{
+				Field:     search.FieldCourseMeetPeriodEnd,
+				Type:      search.FieldTypeNumber,
+				Filter:    search.FieldFilterEqual,
+				TextValue: func() *string { v := "E3"; return &v }(),
+			},
+			want: `"value":14`,
+		},
+		{
+			name: "time 08:30",
+			rule: search.Rule{
+				Field:  search.FieldCourseMeetTimeStart,
+				Type:   search.FieldTypeTime,
+				Filter: search.FieldFilterEqual,
+				TimeValue: &search.TimeOfDay{
+					Hour:   8,
+					Minute: 30,
+				},
+			},
+			want: `"value":510`,
+		},
+		{
+			name: "time 23:59",
+			rule: search.Rule{
+				Field:  search.FieldCourseMeetTimeEnd,
+				Type:   search.FieldTypeTime,
+				Filter: search.FieldFilterEqual,
+				TimeValue: &search.TimeOfDay{
+					Hour:   23,
+					Minute: 59,
+				},
+			},
+			want: `"value":1439`,
+		},
+		{
+			name: "time midnight",
+			rule: search.Rule{
+				Field:  search.FieldCourseMeetTimeStart,
+				Type:   search.FieldTypeTime,
+				Filter: search.FieldFilterEqual,
+				TimeValue: &search.TimeOfDay{
+					Hour:   0,
+					Minute: 0,
+				},
+			},
+			want: `"value":0`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value := float64(3)
-
-			rule := search.Rule{
-				Field:       search.FieldInstructorRating,
-				Type:        search.FieldTypeNumber,
-				Filter:      tt.filter,
-				NumberValue: &value,
-			}
-
-			query := buildScalarNumberRuleQuery(rule)
+			query := buildScalarNumberRuleQuery(tt.rule)
 
 			data, err := query.QueryCaster().MarshalJSON()
 			require.NoError(t, err)

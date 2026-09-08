@@ -1,8 +1,9 @@
 package classes
 
 import (
-	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/shared"
 )
 
 type SearchClassesRequest struct {
@@ -18,6 +19,16 @@ func (r *SearchClassesRequest) Validate() error {
 	return nil
 }
 
+type SearchClassResponseItem struct {
+	Course  sqlc.TypedListCoursesByIDRow   `json:"course"`
+	Classes []sqlc.TypedListClassesByIDRow `json:"classes"`
+}
+
+type SearchClassResponseOutput struct {
+	Total uint
+	Items []SearchClassResponseItem
+}
+
 type SearchClassesResponse struct {
-	Body []elasticsearch.SearchClassResult
+	Body shared.PaginatedResponse[SearchClassResponseItem]
 }

@@ -68,6 +68,14 @@ def get_term_id(term: str, year: int) -> int:
     return int(f"2{year:02d}{TERM_CODES[term]}")
 
 
+def get_term(term_id: int) -> str | None:
+    term_code = term_id % 10
+    for term, code in TERM_CODES.items():
+        if term_code == int(code):
+            return term
+    return None
+
+
 def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
     logger.info(f"Fetching UF courses for term {term_id}")
 
@@ -205,19 +213,110 @@ def parse_words(section: dict) -> int:
         raise ValueError(f"Invalid grWriting value: {value!r}") from exc
 
 
-def parse_building(meet_time: dict[str, Any]) -> str:
-    # Return building + room if present, else code
-    building = meet_time["meetBuilding"]
-    room = meet_time["meetRoom"]
+def parse_times_periods(
+    meet_time: dict[str, Any], term_id: int
+) -> tuple[time, time, str, str] | tuple[None, None, None, None]:
+    time_begin = parse_time(meet_time["meetTimeBegin"])
+    time_end = parse_time(meet_time["meetTimeEnd"])
+    period_begin = meet_time["meetPeriodBegin"]
+    period_end = meet_time["meetPeriodEnd"]
 
-    if building and room:
-        return f"{building} {room}"
+    if time_begin and time_end and period_begin and period_end:
+        return (time_begin, time_end, period_begin, period_end)
 
-    return meet_time["meetBldgCode"]
+    if time_begin and time_end:
+        term = get_term(term_id)
+        if not term:
+            return None, None, None, None
+
+        is_summer = term == "summer"
+        period_begin = parse_period(time_begin, is_summer)
+        period_end = parse_period(time_end, is_summer)
+
+        return (time_begin, time_end, period_begin, period_end)
+
+    return (None, None, None, None)
 
 
 def parse_time(value: str) -> time:
     return datetime.strptime(value, "%I:%M %p").time()  # noqa: DTZ007
+
+
+FALL_SPRING_PERIOD_STARTS = {
+    time(7, 25): "1",
+    time(8, 30): "2",
+    time(9, 35): "3",
+    time(10, 40): "4",
+    time(11, 45): "5",
+    time(12, 50): "6",
+    time(13, 55): "7",
+    time(15, 0): "8",
+    time(16, 5): "9",
+    time(17, 10): "10",
+    time(18, 15): "11",
+    time(19, 20): "E1",
+    time(20, 20): "E2",
+    time(21, 20): "E3",
+}
+
+SUMMER_PERIOD_STARTS = {
+    time(8, 0): "1",
+    time(9, 30): "2",
+    time(11, 0): "3",
+    time(12, 30): "4",
+    time(14, 0): "5",
+    time(15, 30): "6",
+    time(17, 0): "7",
+    time(19, 0): "E1",
+    time(20, 30): "E2",
+}
+
+
+def parse_period(time_: time, summer: bool) -> str:
+    PERIOD_STARTS = SUMMER_PERIOD_STARTS if summer else FALL_SPRING_PERIOD_STARTS
+
+    for start, period in reversed(PERIOD_STARTS.items()):
+        if time_ >= start:
+            return period
+    raise ValueError(f"Time {time_} is before the first period")
+
+
+def upsert_building(
+    conn: psycopg.Connection, meet_time: dict[str, Any]
+) -> tuple[str, str | None] | tuple[None, None]:
+    name = meet_time["meetBuilding"].strip()
+    code = meet_time["meetBldgCode"].strip()
+    if not name and not code:
+        return None, None
+
+    row = conn.execute(
+        """
+        INSERT INTO buildings (name, code)
+        VALUES (%s, %s)
+        ON CONFLICT (code)
+        DO UPDATE SET name = EXCLUDED.name
+        WHERE EXCLUDED.name <> ''
+        RETURNING id
+        """,
+        (name, code),
+    ).fetchone()
+
+    if row is None:
+        row = conn.execute(
+            """
+            SELECT id
+            FROM buildings
+            WHERE code = %s
+            """,
+            (code,),
+        ).fetchone()
+
+    assert row is not None
+
+    building_id = row[0]
+
+    room = meet_time["meetRoom"].strip()
+    return (building_id, room or None)
 
 
 def clean_text(value: str) -> str:
@@ -429,15 +528,13 @@ def upsert_class(
     class_id = row[0]
 
     if authenticated:
-        update_class_meet_times(conn, section, class_id)
+        update_class_meet_times(conn, section, class_id, term_id)
 
     update_class_instructors(conn, section, class_id)
 
 
 def update_class_meet_times(
-    conn: psycopg.Connection,
-    section: dict[str, Any],
-    class_id: str,
+    conn: psycopg.Connection, section: dict[str, Any], class_id: str, term_id: int
 ) -> None:
     conn.execute(
         """
@@ -449,8 +546,8 @@ def update_class_meet_times(
 
     meet_times = section["meetTimes"]
 
-    with conn.cursor() as cur:
-        cur.executemany(
+    for meet_time in meet_times:
+        conn.execute(
             """
             INSERT INTO class_meet_times (
                 class_id,
@@ -460,25 +557,20 @@ def update_class_meet_times(
                 time_end,
                 period_begin,
                 period_end,
-                building
+                building_id,
+                room
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """,
-            [
-                (
-                    class_id,
-                    int(meet_time["meetNo"]),
-                    meet_time["meetDays"],
-                    parse_time(meet_time["meetTimeBegin"]),
-                    parse_time(meet_time["meetTimeEnd"]),
-                    meet_time["meetPeriodBegin"],
-                    meet_time["meetPeriodEnd"],
-                    parse_building(meet_time),
-                )
-                for meet_time in meet_times
-            ],
+            (
+                class_id,
+                int(meet_time["meetNo"]),
+                meet_time["meetDays"],
+                *parse_times_periods(meet_time, term_id),
+                *upsert_building(conn, meet_time),
+            ),
         )
 
 

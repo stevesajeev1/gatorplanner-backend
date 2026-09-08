@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 )
@@ -32,6 +33,7 @@ type FieldType string
 const (
 	FieldTypeText    FieldType = "text"
 	FieldTypeNumber  FieldType = "number"
+	FieldTypeTime    FieldType = "time"
 	FieldTypeBoolean FieldType = "boolean"
 )
 
@@ -60,8 +62,6 @@ const (
 	FieldCourseLevel           Field = "course_level"
 	FieldCourseCredits         Field = "course_credits"
 	FieldCourseWords           Field = "course_words"
-	FieldCourseMeetTimeStart   Field = "meet_times.time_start"
-	FieldCourseMeetTimeEnd     Field = "meet_times.time_end"
 	FieldCourseMeetPeriodStart Field = "meet_times.period_start"
 	FieldCourseMeetPeriodEnd   Field = "meet_times.period_end"
 	FieldInstructorRating      Field = "instructors.rating"
@@ -69,7 +69,16 @@ const (
 	FieldInstructorTakeAgain   Field = "instructors.take_again"
 )
 
-var ValidNumberFields = []Field{FieldClassNumber, FieldCourseLevel, FieldCourseCredits, FieldCourseWords, FieldCourseMeetTimeStart, FieldCourseMeetTimeEnd, FieldCourseMeetPeriodStart, FieldCourseMeetPeriodEnd, FieldInstructorRating, FieldInstructorDifficulty, FieldInstructorTakeAgain}
+var ValidGeneralNumberFields = []Field{FieldClassNumber, FieldCourseLevel, FieldCourseCredits, FieldCourseWords, FieldInstructorRating, FieldInstructorDifficulty, FieldInstructorTakeAgain}
+var ValidCheckedNumberFields = []Field{FieldCourseMeetPeriodStart, FieldCourseMeetPeriodEnd}
+
+// Time Fields
+const (
+	FieldCourseMeetTimeStart Field = "meet_times.time_start"
+	FieldCourseMeetTimeEnd   Field = "meet_times.time_end"
+)
+
+var ValidTimeFields = []Field{FieldCourseMeetTimeStart, FieldCourseMeetTimeEnd}
 
 // Boolean Fields
 const (
@@ -97,14 +106,38 @@ const (
 var ValidFilters = []FieldFilter{FieldFilterEqual, FieldFilterNotEqual}
 var ValidNumberFilters = []FieldFilter{FieldFilterEqual, FieldFilterNotEqual, FieldFilterGreater, FieldFilterLess, FieldFilterGreaterOrEqual, FieldFilterLessOrEqual}
 
+type TimeOfDay struct {
+	Hour   int
+	Minute int
+}
+
+func (t *TimeOfDay) UnmarshalJSON(data []byte) error {
+	var value string
+
+	if err := json.Unmarshal(data, &value); err != nil {
+		return fmt.Errorf("time must be a string: %w", err)
+	}
+
+	parsed, err := time.Parse("15:04", value)
+	if err != nil {
+		return fmt.Errorf("invalid time %q, expected HH:MM: %w", value, err)
+	}
+
+	t.Hour = parsed.Hour()
+	t.Minute = parsed.Minute()
+
+	return nil
+}
+
 type Rule struct {
 	Field  Field       `json:"field"`
 	Type   FieldType   `json:"type"`
 	Filter FieldFilter `json:"filter"`
 
-	TextValue    *string  `json:"-"`
-	NumberValue  *float64 `json:"-"`
-	BooleanValue *bool    `json:"-"`
+	TextValue    *string    `json:"-"`
+	NumberValue  *float64   `json:"-"`
+	TimeValue    *TimeOfDay `json:"-"`
+	BooleanValue *bool      `json:"-"`
 }
 
 func (Filter) isFilterNode() {}
@@ -147,23 +180,23 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 		switch r.Field {
 		case FieldClassMeetType:
 			if !slices.Contains(sqlc.ValidMeetTypes, sqlc.ClassMeetType(*r.TextValue)) {
-				return fmt.Errorf("invalid text value: %q", *r.TextValue)
+				return fmt.Errorf("invalid meet type: %q", *r.TextValue)
 			}
 		case FieldCourseGenEds:
 			if !slices.Contains(sqlc.ValidGenEds, sqlc.GenEd(*r.TextValue)) {
-				return fmt.Errorf("invalid text value: %q", *r.TextValue)
+				return fmt.Errorf("invalid gen ed: %q", *r.TextValue)
 			}
 		case FieldCourseQuest:
 			if !slices.Contains(sqlc.ValidQuests, sqlc.Quest(*r.TextValue)) {
-				return fmt.Errorf("invalid text value: %q", *r.TextValue)
+				return fmt.Errorf("invalid quest: %q", *r.TextValue)
 			}
 		case FieldCourseMeetDays:
 			if !slices.Contains(sqlc.ValidMeetDays, sqlc.MeetDayType(*r.TextValue)) {
-				return fmt.Errorf("invalid text value: %q", *r.TextValue)
+				return fmt.Errorf("invalid meet day: %q", *r.TextValue)
 			}
 		}
 	case FieldTypeNumber:
-		if !slices.Contains(ValidNumberFields, r.Field) {
+		if !slices.Contains(ValidGeneralNumberFields, r.Field) && !slices.Contains(ValidCheckedNumberFields, r.Field) {
 			return fmt.Errorf("invalid number field %q", r.Field)
 		}
 
@@ -171,8 +204,31 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid number filter %q", r.Filter)
 		}
 
-		if err := json.Unmarshal(*raw.Value, &r.NumberValue); err != nil {
-			return fmt.Errorf("invalid number value: %w", err)
+		switch r.Field {
+		case FieldCourseMeetPeriodStart, FieldCourseMeetPeriodEnd:
+			if err := json.Unmarshal(*raw.Value, &r.TextValue); err != nil {
+				return fmt.Errorf("invalid text value: %w", err)
+			}
+
+			if !slices.Contains(sqlc.ValidPeriods, sqlc.Period(*r.TextValue)) {
+				return fmt.Errorf("invalid period: %q", *r.TextValue)
+			}
+		default:
+			if err := json.Unmarshal(*raw.Value, &r.NumberValue); err != nil {
+				return fmt.Errorf("invalid number value: %w", err)
+			}
+		}
+	case FieldTypeTime:
+		if !slices.Contains(ValidTimeFields, r.Field) {
+			return fmt.Errorf("invalid time field %q", r.Field)
+		}
+
+		if !slices.Contains(ValidNumberFilters, r.Filter) {
+			return fmt.Errorf("invalid time filter %q", r.Filter)
+		}
+
+		if err := json.Unmarshal(*raw.Value, &r.TimeValue); err != nil {
+			return fmt.Errorf("invalid time value: %w", err)
 		}
 	case FieldTypeBoolean:
 		if !slices.Contains(ValidBooleanFields, r.Field) {

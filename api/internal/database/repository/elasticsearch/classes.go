@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/elastic/go-elasticsearch/v9/typedapi/esdsl"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/rangerelation"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/textquerytype"
-	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
+	"github.com/google/uuid"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
 )
@@ -101,6 +103,9 @@ func buildRuleQuery(rule search.Rule) types.QueryVariant {
 		query = buildTextRuleQuery(rule)
 
 	case search.FieldTypeNumber:
+		query = buildNumberRuleQuery(rule)
+
+	case search.FieldTypeTime:
 		query = buildNumberRuleQuery(rule)
 
 	case search.FieldTypeBoolean:
@@ -197,7 +202,27 @@ func buildRangeNumberRuleQuery(rule search.Rule) types.QueryVariant {
 }
 
 func buildScalarNumberRuleQuery(rule search.Rule) types.QueryVariant {
-	value := types.Float64(*rule.NumberValue)
+	var value types.Float64
+	switch rule.Type {
+	case search.FieldTypeNumber:
+		switch rule.Field {
+		case search.FieldCourseMeetPeriodStart, search.FieldCourseMeetPeriodEnd:
+			period := *rule.TextValue
+
+			if after, ok := strings.CutPrefix(period, "E"); ok {
+				n, _ := strconv.Atoi(after)
+				value = types.Float64(11 + n)
+			} else {
+				n, _ := strconv.Atoi(period)
+				value = types.Float64(n)
+			}
+		default:
+			value = types.Float64(*rule.NumberValue)
+		}
+	case search.FieldTypeTime:
+		time := *rule.TimeValue
+		value = types.Float64(time.Hour*60 + time.Minute)
+	}
 
 	switch rule.Filter {
 	case search.FieldFilterEqual:
@@ -282,8 +307,13 @@ func wrapNestedQuery(field search.Field, query types.QueryVariant) types.QueryVa
 }
 
 type SearchClassResult struct {
-	CourseCode string                       `json:"course_code"`
-	Classes    []sqlc.TypedSearchClassesRow `json:"classes"`
+	Total uint
+	Items []*SearchClassResultItem
+}
+
+type SearchClassResultItem struct {
+	CourseID int32
+	ClassIDs []uuid.UUID
 }
 
 func (r *ClassesESRepository) Search(
@@ -291,7 +321,9 @@ func (r *ClassesESRepository) Search(
 	termID int64,
 	search *string,
 	filter *search.Filter,
-) ([]SearchClassResult, error) {
+	limit uint,
+	offset uint,
+) (*SearchClassResult, error) {
 	query := esdsl.NewBoolQuery()
 
 	if search != nil {
@@ -309,46 +341,65 @@ func (r *ClassesESRepository) Search(
 		query = query.Filter(termFilter)
 	}
 
-	data, _ := query.QueryCaster().MarshalJSON()
-	fmt.Println(string(data))
-
-	results, err := r.es.Search().
+	res, err := r.es.Search().
 		Index("classes").
 		Query(query).
 		Collapse(
 			esdsl.NewFieldCollapse().
-				Field("course_code.keyword").
-				InnerHits(esdsl.NewInnerHits().Name("classes").Size(100)),
+				Field("course_id").
+				InnerHits(
+					esdsl.NewInnerHits().
+						Name("classes").
+						Size(100).
+						Source_(esdsl.NewSourceFilter().Excludes("*")),
+				),
+		).
+		From(int(offset)).
+		Size(int(limit)).
+		AddAggregation(
+			"total_courses",
+			esdsl.NewCardinalityAggregation().
+				Field("course_code.keyword"),
 		).
 		Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("elasticsearch search: %w", err)
 	}
 
-	out := make([]SearchClassResult, len(results.Hits.Hits))
-	for i, hit := range results.Hits.Hits {
-		out[i] = SearchClassResult{}
+	total := uint(res.Aggregations["total_courses"].(*types.CardinalityAggregate).Value)
 
+	items := make([]*SearchClassResultItem, len(res.Hits.Hits))
+	for i, courseHit := range res.Hits.Hits {
 		var course struct {
-			CourseCode string `json:"course_code"`
+			CourseID int32 `json:"course_id"`
 		}
-		if err := json.Unmarshal(hit.Source_, &course); err != nil {
+		if err := json.Unmarshal(courseHit.Source_, &course); err != nil {
 			return nil, fmt.Errorf("unmarshal course: %w", err)
 		}
-		out[i].CourseCode = course.CourseCode
 
-		innerHits, ok := hit.InnerHits["classes"]
+		innerHits, ok := courseHit.InnerHits["classes"]
 		if !ok {
 			continue
 		}
 
-		out[i].Classes = make([]sqlc.TypedSearchClassesRow, len(innerHits.Hits.Hits))
-
+		classIDs := make([]uuid.UUID, len(innerHits.Hits.Hits))
 		for j, classHit := range innerHits.Hits.Hits {
-			if err := json.Unmarshal(classHit.Source_, &out[i].Classes[j]); err != nil {
-				return nil, fmt.Errorf("unmarshal class: %w", err)
+			id, err := uuid.Parse(*classHit.Id_)
+			if err != nil {
+				return nil, fmt.Errorf("parse class ID: %w", err)
 			}
+
+			classIDs[j] = id
+		}
+
+		items[i] = &SearchClassResultItem{
+			CourseID: course.CourseID,
+			ClassIDs: classIDs,
 		}
 	}
-	return out, nil
+
+	return &SearchClassResult{
+		Total: total,
+		Items: items,
+	}, nil
 }
