@@ -58,9 +58,7 @@ func (s *ClassesService) Search(
 	for i, item := range search.Items {
 		courseIDs[i] = item.CourseID
 
-		for _, classID := range item.ClassIDs {
-			classIDs = append(classIDs, classID)
-		}
+		classIDs = append(classIDs, item.ClassIDs...)
 	}
 
 	// Get actual documents from database
