@@ -43,7 +43,6 @@ func (h *handler) classesHTTPError(err error, fallback string) error {
 		return huma.Error400BadRequest(err.Error())
 	}
 
-	h.logger.Warn().Err(err).Msg("")
-	return huma.Error500InternalServerError(err.Error())
-	// return huma.Error500InternalServerError(fallback)
+	h.logger.Warn().Err(err).Msg("Failed to search classes")
+	return huma.Error500InternalServerError(fallback)
 }
