@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Port             string `env:"PORT" envDefault:"8080"`
-	DatabaseURL      string `env:"DATABASE_URL"`
-	ElasticsearchURL string `env:"ELASTICSEARCH_URL"`
+	Port             string   `env:"PORT" envDefault:"8080"`
+	DatabaseURL      string   `env:"DATABASE_URL"`
+	ElasticsearchURL string   `env:"ELASTICSEARCH_URL"`
+	AllowedOrigins   []string `env:"ALLOWED_ORIGINS" envSeparator:","`
 }
 
 func LoadConfig() *Config {
