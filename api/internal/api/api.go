@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/config"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
@@ -32,6 +33,12 @@ func Run() {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   config.AllowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	humaConfig := huma.DefaultConfig("GatorPlanner API", "1.0.0")
 	humaConfig.DocsRenderer = huma.DocsRendererScalar
