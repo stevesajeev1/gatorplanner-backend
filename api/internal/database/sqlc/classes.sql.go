@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listClassesByID = `-- name: ListClassesByID :many
@@ -33,7 +34,7 @@ SELECT
                         ELSE jsonb_build_object(
                             'name', b.name,
                             'code', b.code,
-                            'room', NULLIF(TRIM(cmt.room), '')
+                            'room', NULLIF(cmt.room, '')
                         )
                     END
                 )
@@ -100,6 +101,94 @@ func (q *Queries) ListClassesByID(ctx context.Context, ids []uuid.UUID) ([]ListC
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listClassesForScheduler = `-- name: ListClassesForScheduler :many
+SELECT
+    cl.course_id,
+    cl.id AS class_id,
+    cmt.days,
+    cmt.time_begin,
+    cmt.time_end
+FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)
+JOIN classes cl
+    ON cl.id = ids.id
+LEFT JOIN class_meet_times cmt
+    ON cmt.class_id = cl.id
+WHERE cl.term_id = $2
+ORDER BY ids.ord
+`
+
+type ListClassesForSchedulerParams struct {
+	ClassIds []uuid.UUID `json:"class_ids"`
+	TermID   int32       `json:"term_id"`
+}
+
+type ListClassesForSchedulerRow struct {
+	CourseID  uuid.UUID     `json:"course_id"`
+	ClassID   uuid.UUID     `json:"class_id"`
+	Days      []MeetDayType `json:"days"`
+	TimeBegin pgtype.Time   `json:"time_begin"`
+	TimeEnd   pgtype.Time   `json:"time_end"`
+}
+
+func (q *Queries) ListClassesForScheduler(ctx context.Context, arg ListClassesForSchedulerParams) ([]ListClassesForSchedulerRow, error) {
+	rows, err := q.db.Query(ctx, listClassesForScheduler, arg.ClassIds, arg.TermID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListClassesForSchedulerRow{}
+	for rows.Next() {
+		var i ListClassesForSchedulerRow
+		if err := rows.Scan(
+			&i.CourseID,
+			&i.ClassID,
+			&i.Days,
+			&i.TimeBegin,
+			&i.TimeEnd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const validateClassesForTerm = `-- name: ValidateClassesForTerm :many
+SELECT cl.id
+FROM unnest($1::uuid[]) AS ids(id)
+JOIN classes cl
+    ON cl.id = ids.id
+WHERE cl.term_id = $2
+`
+
+type ValidateClassesForTermParams struct {
+	ClassIds []uuid.UUID `json:"class_ids"`
+	TermID   int32       `json:"term_id"`
+}
+
+func (q *Queries) ValidateClassesForTerm(ctx context.Context, arg ValidateClassesForTermParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, validateClassesForTerm, arg.ClassIds, arg.TermID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

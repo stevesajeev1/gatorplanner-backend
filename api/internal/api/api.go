@@ -12,11 +12,13 @@ import (
 	"github.com/stevesajeev1/gatorplanner-backend/internal/config"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/optimizer"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/buildings"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/departments"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/schedules"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/logger"
 )
 
@@ -30,6 +32,9 @@ func Run() {
 
 	es := dependencies.NewES(config.ElasticsearchURL)
 	defer es.Close()
+
+	o := dependencies.NewOptimizer(config.OptimizerURL)
+	defer o.Close()
 
 	// Router
 	r := chi.NewRouter()
@@ -60,6 +65,8 @@ func Run() {
 
 	classesESRepo := elasticsearch.NewClassesESRepository(es)
 
+	schedulesOptimizerRepo := optimizer.NewSchedulesOptimizerRepository(o)
+
 	// Routes registration
 	classesService := classes.NewService(coursesDBRepo, classesDBRepo, classesESRepo, logger)
 	classesHandler := classes.NewHandler(classesService, logger)
@@ -72,6 +79,10 @@ func Run() {
 	departmentsService := departments.NewService(departmentsDBRepo, logger)
 	departmentsHandler := departments.NewHandler(departmentsService, logger)
 	departments.RegisterRoutes(departmentsHandler, huma.NewGroup(api))
+
+	schedulesService := schedules.NewService(classesDBRepo, coursesDBRepo, schedulesOptimizerRepo, logger)
+	schedulesHandler := schedules.NewHandler(schedulesService, logger)
+	schedules.RegisterRoutes(schedulesHandler, huma.NewGroup(api, "/term/{termID}/schedules"))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "ping",

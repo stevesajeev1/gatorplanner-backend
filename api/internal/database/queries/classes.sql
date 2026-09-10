@@ -56,3 +56,25 @@ FROM unnest(@ids::uuid[]) WITH ORDINALITY AS ids(id, ord)
 JOIN classes cl
     ON cl.id = ids.id
 ORDER BY ids.ord;
+
+-- name: ValidateClassesForTerm :many
+SELECT cl.id
+FROM unnest(@class_ids::uuid[]) AS ids(id)
+JOIN classes cl
+    ON cl.id = ids.id
+WHERE cl.term_id = @term_id;
+
+-- name: ListClassesForScheduler :many
+SELECT
+    cl.course_id,
+    cl.id AS class_id,
+    cmt.days,
+    cmt.time_begin,
+    cmt.time_end
+FROM unnest(@class_ids::uuid[]) WITH ORDINALITY AS ids(id, ord)
+JOIN classes cl
+    ON cl.id = ids.id
+LEFT JOIN class_meet_times cmt
+    ON cmt.class_id = cl.id
+WHERE cl.term_id = @term_id
+ORDER BY ids.ord;
