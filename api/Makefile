@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: lint lint-fix fmt migrate-up migrate-down migrate-create generate
+.PHONY: lint lint-fix fmt migrate-up migrate-down migrate-create generate test
 
 lint:
 	go tool golangci-lint run
@@ -23,3 +23,6 @@ migrate-create:
 
 generate:
 	go tool sqlc generate
+
+test:
+	go test ./...
