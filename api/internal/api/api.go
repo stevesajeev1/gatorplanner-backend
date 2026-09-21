@@ -13,8 +13,10 @@ import (
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/elasticsearch"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/buildings"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/classes/search"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/departments"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/logger"
 )
 
@@ -53,6 +55,8 @@ func Run() {
 	// Repositories Setup
 	coursesDBRepo := database.NewCoursesRepository(db)
 	classesDBRepo := database.NewClassesRepository(db)
+	buildingsDBRepo := database.NewBuildingsRepository(db)
+	departmentsDBRepo := database.NewDepartmentsRepository(db)
 
 	classesESRepo := elasticsearch.NewClassesESRepository(es)
 
@@ -60,6 +64,14 @@ func Run() {
 	classesService := classes.NewService(coursesDBRepo, classesDBRepo, classesESRepo, logger)
 	classesHandler := classes.NewHandler(classesService, logger)
 	classes.RegisterRoutes(classesHandler, huma.NewGroup(api, "/term/{termID}/classes"))
+
+	buildingsService := buildings.NewService(buildingsDBRepo, logger)
+	buildingsHandler := buildings.NewHandler(buildingsService, logger)
+	buildings.RegisterRoutes(buildingsHandler, huma.NewGroup(api))
+
+	departmentsService := departments.NewService(departmentsDBRepo, logger)
+	departmentsHandler := departments.NewHandler(departmentsService, logger)
+	departments.RegisterRoutes(departmentsHandler, huma.NewGroup(api))
 
 	huma.Register(api, huma.Operation{
 		OperationID: "ping",
