@@ -328,8 +328,8 @@ type Course struct {
 	ID             int32                 `json:"id"`
 	TermID         int32                 `json:"term_id"`
 	Code           string                `json:"code"`
-	CodePrefix     *string               `json:"code_prefix"`
-	IsLab          *bool                 `json:"is_lab"`
+	CodePrefix     string                `json:"code_prefix"`
+	IsLab          bool                  `json:"is_lab"`
 	Name           string                `json:"name"`
 	Description    string                `json:"description"`
 	Syllabus       string                `json:"syllabus"`
@@ -344,7 +344,7 @@ type Course struct {
 	IsHonors       bool                  `json:"is_honors"`
 	IngestionRunID pgtype.UUID           `json:"ingestion_run_id"`
 	CreditsType    NullCourseCreditsType `json:"credits_type"`
-	Level          *int32                `json:"level"`
+	Level          int32                 `json:"level"`
 }
 
 type Department struct {

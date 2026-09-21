@@ -39,7 +39,7 @@ ORDER BY ids.ord
 
 type ListCoursesByIDRow struct {
 	Code          string         `json:"code"`
-	IsLab         *bool          `json:"is_lab"`
+	IsLab         bool           `json:"is_lab"`
 	Name          string         `json:"name"`
 	Description   string         `json:"description"`
 	Syllabus      string         `json:"syllabus"`

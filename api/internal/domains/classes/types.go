@@ -21,7 +21,7 @@ func (r *SearchClassesRequest) Validate() error {
 
 type SearchClassResponseItem struct {
 	Course  sqlc.TypedListCoursesByIDRow   `json:"course"`
-	Classes []sqlc.TypedListClassesByIDRow `json:"classes"`
+	Classes []sqlc.TypedListClassesByIDRow `json:"classes" nullable:"false"`
 }
 
 type SearchClassResponseOutput struct {
