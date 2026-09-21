@@ -18,7 +18,7 @@ type TypedListCoursesByIDRow struct {
 	ListCoursesByIDRow
 	CreditsMin float64 `json:"credits_min"`
 	CreditsMax float64 `json:"credits_max"`
-	GenEds     []GenEd `json:"gen_eds"`
+	GenEds     []GenEd `json:"gen_eds" nullable:"false"`
 	Quest      *Quest  `json:"quest"`
 }
 
@@ -34,7 +34,7 @@ func (r RawListCoursesByIDRows) Typed() ([]TypedListCoursesByIDRow, error) {
 			return nil, fmt.Errorf("convert credits max for course %s: %w", rawCourse.Code, err)
 		}
 
-		var genEds []GenEd
+		genEds := []GenEd{}
 		if err := json.Unmarshal(rawCourse.GenEds, &genEds); err != nil {
 			return nil, fmt.Errorf("unmarshal gen eds for course %s: %w", rawCourse.Code, err)
 		}
@@ -80,16 +80,17 @@ func (t timeOfDay) MarshalJSON() ([]byte, error) {
 }
 
 type CustomMeetTime struct {
-	Days        []MeetDayType `json:"days"`
-	TimeStart   *timeOfDay    `json:"time_start"`
-	TimeEnd     *timeOfDay    `json:"time_end"`
-	PeriodStart *string       `json:"period_start"`
-	PeriodEnd   *string       `json:"period_end"`
-	Building    *string       `json:"building"`
+	Days        []MeetDayType `json:"days" nullable:"false"`
+	TimeStart   timeOfDay     `json:"time_start"`
+	TimeEnd     timeOfDay     `json:"time_end"`
+	PeriodStart string        `json:"period_start"`
+	PeriodEnd   string        `json:"period_end"`
+	Building    string        `json:"building"`
 }
 
 type CustomInstructor struct {
 	Name       string   `json:"name"`
+	RMPId      *int32   `json:"rmp_id"`
 	Rating     *float64 `json:"rating"`
 	Difficulty *float64 `json:"difficulty"`
 	TakeAgain  *float64 `json:"take_again"`
@@ -99,8 +100,8 @@ type RawListClassesByIDRows []ListClassesByIDRow
 
 type TypedListClassesByIDRow struct {
 	ListClassesByIDRow
-	MeetTimes   []CustomMeetTime   `json:"meet_times"`
-	Instructors []CustomInstructor `json:"instructors"`
+	MeetTimes   []CustomMeetTime   `json:"meet_times" nullable:"false"`
+	Instructors []CustomInstructor `json:"instructors" nullable:"false"`
 }
 
 func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
@@ -111,7 +112,7 @@ func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
 			return nil, fmt.Errorf("marshal meet times for class %d: %w", rawClass.Number, err)
 		}
 
-		var meetTimes []CustomMeetTime
+		meetTimes := []CustomMeetTime{}
 		if err := json.Unmarshal(meetTimesJSON, &meetTimes); err != nil {
 			return nil, fmt.Errorf("unmarshal meet times for class %d: %w", rawClass.Number, err)
 		}
@@ -121,7 +122,7 @@ func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
 			return nil, fmt.Errorf("marshal instructors for class %d: %w", rawClass.Number, err)
 		}
 
-		var instructors []CustomInstructor
+		instructors := []CustomInstructor{}
 		if err := json.Unmarshal(instructorsJSON, &instructors); err != nil {
 			return nil, fmt.Errorf("unmarshal instructors for class %d: %w", rawClass.Number, err)
 		}

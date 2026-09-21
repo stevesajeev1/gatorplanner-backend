@@ -10,7 +10,7 @@ type PaginatedResponse[T any] struct {
 	Limit  uint `json:"limit"`
 	Offset uint `json:"offset"`
 	Count  uint `json:"count"`
-	Items  []T  `json:"items"`
+	Items  []T  `json:"items" nullable:"false"`
 }
 
 func Paginate[T any](items []T, total uint, limit uint, offset uint) PaginatedResponse[T] {
