@@ -140,12 +140,7 @@ def sync(
                                     ELSE NULLIF(cmt.period_end::text, '')::integer
                                 END,
 
-                                'building',
-                                CASE
-                                    WHEN cmt.room IS NOT NULL
-                                        THEN b.name || ' ' || cmt.room
-                                    ELSE b.code
-                                END
+                                'building', b.name
                             )
                         )
                         FROM class_meet_times cmt
