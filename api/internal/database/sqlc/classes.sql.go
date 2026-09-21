@@ -48,6 +48,7 @@ SELECT
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'name', i.name,
+                    'rmp_id', i.rmp_id,
                     'rating', i.rating,
                     'difficulty', i.difficulty,
                     'take_again', i.take_again
