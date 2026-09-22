@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 )
 
 type BuildingsService struct {
@@ -24,6 +25,15 @@ func NewService(
 
 func (s *BuildingsService) List(
 	ctx context.Context,
-) ([]string, error) {
-	return s.buildingsDBRepo.ListBuildings(ctx)
+) ([]sqlc.TypedListBuildingsRow, error) {
+	rawBuildings, err := s.buildingsDBRepo.ListBuildings(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	buildings, err := sqlc.RawListBuildingsRows(rawBuildings).Typed()
+	if err != nil {
+		return nil, err
+	}
+	return buildings, nil
 }

@@ -1,2 +1,8 @@
 -- name: ListBuildings :many
-SELECT DISTINCT name FROM buildings ORDER BY name ASC;
+SELECT
+    name,
+    code,
+    latitude,
+    longitude
+FROM buildings
+ORDER BY name ASC;

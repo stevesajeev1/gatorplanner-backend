@@ -79,13 +79,20 @@ func (t timeOfDay) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Format("15:04:05"))
 }
 
+type CustomBuilding struct {
+	_    struct{} `nullable:"true"`
+	Name string   `json:"name"`
+	Code string   `json:"code"`
+	Room *string  `json:"room"`
+}
+
 type CustomMeetTime struct {
-	Days        []MeetDayType `json:"days" nullable:"false"`
-	TimeStart   timeOfDay     `json:"time_start"`
-	TimeEnd     timeOfDay     `json:"time_end"`
-	PeriodStart string        `json:"period_start"`
-	PeriodEnd   string        `json:"period_end"`
-	Building    string        `json:"building"`
+	Days        []MeetDayType   `json:"days" nullable:"false"`
+	TimeStart   timeOfDay       `json:"time_start"`
+	TimeEnd     timeOfDay       `json:"time_end"`
+	PeriodStart string          `json:"period_start"`
+	PeriodEnd   string          `json:"period_end"`
+	Building    *CustomBuilding `json:"building"`
 }
 
 type CustomInstructor struct {
@@ -134,4 +141,41 @@ func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
 		}
 	}
 	return typedClasses, nil
+}
+
+type RawListBuildingsRows []ListBuildingsRow
+
+type TypedListBuildingsRow struct {
+	ListBuildingsRow
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
+func (r RawListBuildingsRows) Typed() ([]TypedListBuildingsRow, error) {
+	typedBuildings := make([]TypedListBuildingsRow, len(r))
+	for i, rawBuilding := range r {
+		var latitude *float64 = nil
+		if rawBuilding.Latitude.Valid {
+			value, err := rawBuilding.Latitude.Float64Value()
+			if err != nil {
+				return nil, fmt.Errorf("convert latitude for building %s: %w", rawBuilding.Name, err)
+			}
+			latitude = &value.Float64
+		}
+		var longitude *float64 = nil
+		if rawBuilding.Longitude.Valid {
+			value, err := rawBuilding.Longitude.Float64Value()
+			if err != nil {
+				return nil, fmt.Errorf("convert longitude for building %s: %w", rawBuilding.Name, err)
+			}
+			longitude = &value.Float64
+		}
+
+		typedBuildings[i] = TypedListBuildingsRow{
+			ListBuildingsRow: rawBuilding,
+			Latitude:         latitude,
+			Longitude:        longitude,
+		}
+	}
+	return typedBuildings, nil
 }
