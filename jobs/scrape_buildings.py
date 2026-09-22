@@ -1,8 +1,8 @@
 import argparse
 import logging
 import os
-from dataclasses import dataclass
 import uuid
+from dataclasses import dataclass
 
 import psycopg
 import requests
@@ -20,17 +20,19 @@ logger = logging.getLogger(__name__)
 DATA_URL = "https://campusmap.ufl.edu/library/api/searchBldg"
 
 overrides = {
-    'FLAV': '1999',
+    "FLAV": "1999",
 }
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Ingest building data into PostgreSQL.")
+    parser = argparse.ArgumentParser(
+        description="Ingest building data into PostgreSQL."
+    )
 
     parser.add_argument(
         "--database-url",
         default=os.environ.get("DATABASE_URL"),
-        help="PostgreSQL connection URL. Defaults to DATABASE_URL."
+        help="PostgreSQL connection URL. Defaults to DATABASE_URL.",
     )
 
     return parser.parse_args()
@@ -116,13 +118,13 @@ def ingest(database_url: str) -> None:
 
 def main() -> None:
     args = parse_args()
-    
+
     if not args.database_url:
         raise RuntimeError(
             "DATABASE_URL must be provided with --database-url "
             "or the DATABASE_URL environment variable"
         )
-    
+
     ingest(database_url=args.database_url)
 
 
