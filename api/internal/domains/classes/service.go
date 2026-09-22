@@ -53,7 +53,7 @@ func (s *ClassesService) Search(
 	}
 
 	// Flatten results
-	courseIDs := make([]int32, len(search.Items))
+	courseIDs := make([]uuid.UUID, len(search.Items))
 	classIDs := []uuid.UUID{}
 	for i, item := range search.Items {
 		courseIDs[i] = item.CourseID

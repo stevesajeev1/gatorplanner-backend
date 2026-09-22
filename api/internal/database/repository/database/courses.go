@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 )
@@ -17,7 +18,7 @@ func NewCoursesRepository(db *dependencies.DB) *CoursesRepository {
 
 func (r *CoursesRepository) ListCoursesByID(
 	ctx context.Context,
-	ids []int32,
+	ids []uuid.UUID,
 ) ([]sqlc.ListCoursesByIDRow, error) {
 	return r.db.Query.ListCoursesByID(ctx, ids)
 }

@@ -32,7 +32,7 @@
         "type": "keyword"
       },
       "course_id": {
-        "type": "integer"
+        "type": "keyword"
       },
       "course_code": {
         "type": "text",

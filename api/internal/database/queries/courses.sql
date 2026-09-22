@@ -1,5 +1,6 @@
 -- name: ListCoursesByID :many
 SELECT
+    c.id,
     c.code,
     c.is_lab,
     c.name,
@@ -16,7 +17,7 @@ SELECT
 
     d.name AS department
 
-FROM unnest(@ids::integer[]) WITH ORDINALITY AS ids(id, ord)
+FROM unnest(@ids::uuid[]) WITH ORDINALITY AS ids(id, ord)
 JOIN courses c
     ON c.id = ids.id
 JOIN departments d

@@ -13,6 +13,7 @@ import (
 
 const listClassesByID = `-- name: ListClassesByID :many
 SELECT
+    cl.id,
     cl.number,
     cl.note,
     cl.meet_type,
@@ -69,6 +70,7 @@ ORDER BY ids.ord
 `
 
 type ListClassesByIDRow struct {
+	ID          uuid.UUID     `json:"id"`
 	Number      int32         `json:"number"`
 	Note        *string       `json:"note"`
 	MeetType    ClassMeetType `json:"meet_type"`
@@ -86,6 +88,7 @@ func (q *Queries) ListClassesByID(ctx context.Context, ids []uuid.UUID) ([]ListC
 	for rows.Next() {
 		var i ListClassesByIDRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.Number,
 			&i.Note,
 			&i.MeetType,
