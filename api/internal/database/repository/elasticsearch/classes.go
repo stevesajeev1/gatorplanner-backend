@@ -312,7 +312,7 @@ type SearchClassResult struct {
 }
 
 type SearchClassResultItem struct {
-	CourseID int32
+	CourseID uuid.UUID
 	ClassIDs []uuid.UUID
 }
 
@@ -359,7 +359,7 @@ func (r *ClassesESRepository) Search(
 		AddAggregation(
 			"total_courses",
 			esdsl.NewCardinalityAggregation().
-				Field("course_code.keyword"),
+				Field("course_id"),
 		).
 		Do(ctx)
 	if err != nil {
@@ -371,7 +371,7 @@ func (r *ClassesESRepository) Search(
 	items := make([]*SearchClassResultItem, len(res.Hits.Hits))
 	for i, courseHit := range res.Hits.Hits {
 		var course struct {
-			CourseID int32 `json:"course_id"`
+			CourseID uuid.UUID `json:"course_id"`
 		}
 		if err := json.Unmarshal(courseHit.Source_, &course); err != nil {
 			return nil, fmt.Errorf("unmarshal course: %w", err)
