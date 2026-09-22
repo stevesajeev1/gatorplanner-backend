@@ -8,11 +8,13 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listCoursesByID = `-- name: ListCoursesByID :many
 SELECT
+    c.id,
     c.code,
     c.is_lab,
     c.name,
@@ -29,7 +31,7 @@ SELECT
 
     d.name AS department
 
-FROM unnest($1::integer[]) WITH ORDINALITY AS ids(id, ord)
+FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)
 JOIN courses c
     ON c.id = ids.id
 JOIN departments d
@@ -38,6 +40,7 @@ ORDER BY ids.ord
 `
 
 type ListCoursesByIDRow struct {
+	ID            uuid.UUID      `json:"id"`
 	Code          string         `json:"code"`
 	IsLab         bool           `json:"is_lab"`
 	Name          string         `json:"name"`
@@ -54,7 +57,7 @@ type ListCoursesByIDRow struct {
 	Department    string         `json:"department"`
 }
 
-func (q *Queries) ListCoursesByID(ctx context.Context, ids []int32) ([]ListCoursesByIDRow, error) {
+func (q *Queries) ListCoursesByID(ctx context.Context, ids []uuid.UUID) ([]ListCoursesByIDRow, error) {
 	rows, err := q.db.Query(ctx, listCoursesByID, ids)
 	if err != nil {
 		return nil, err
@@ -64,6 +67,7 @@ func (q *Queries) ListCoursesByID(ctx context.Context, ids []int32) ([]ListCours
 	for rows.Next() {
 		var i ListCoursesByIDRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.Code,
 			&i.IsLab,
 			&i.Name,

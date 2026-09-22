@@ -298,12 +298,12 @@ type Building struct {
 
 type Class struct {
 	ID             uuid.UUID     `json:"id"`
-	CourseID       int32         `json:"course_id"`
 	TermID         int32         `json:"term_id"`
 	Number         int32         `json:"number"`
 	Note           *string       `json:"note"`
 	MeetType       ClassMeetType `json:"meet_type"`
 	IngestionRunID pgtype.UUID   `json:"ingestion_run_id"`
+	CourseID       uuid.UUID     `json:"course_id"`
 }
 
 type ClassInstructor struct {
@@ -325,7 +325,7 @@ type ClassMeetTime struct {
 }
 
 type Course struct {
-	ID             int32                 `json:"id"`
+	UfID           int32                 `json:"uf_id"`
 	TermID         int32                 `json:"term_id"`
 	Code           string                `json:"code"`
 	CodePrefix     string                `json:"code_prefix"`
@@ -345,6 +345,7 @@ type Course struct {
 	IngestionRunID pgtype.UUID           `json:"ingestion_run_id"`
 	CreditsType    NullCourseCreditsType `json:"credits_type"`
 	Level          int32                 `json:"level"`
+	ID             uuid.UUID             `json:"id"`
 }
 
 type Department struct {

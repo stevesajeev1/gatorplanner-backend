@@ -1,5 +1,6 @@
 -- name: ListClassesByID :many
 SELECT
+    cl.id,
     cl.number,
     cl.note,
     cl.meet_type,
