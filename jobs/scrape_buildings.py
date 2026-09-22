@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 from dataclasses import dataclass
+import uuid
 
 import psycopg
 import requests
@@ -37,7 +38,7 @@ def parse_args() -> argparse.Namespace:
 
 @dataclass
 class Building:
-    id: str
+    id: uuid.UUID
     code: str
     latitude: float
     longitude: float
@@ -52,7 +53,7 @@ def fetch_buildings(database_url: str) -> list[Building]:
         ).fetchall()
 
     buildings_count = len(rows)
-    
+
     logger.info(f"Fetching information for {buildings_count} buildings")
 
     all_buildings = []
@@ -70,11 +71,10 @@ def fetch_buildings(database_url: str) -> list[Building]:
         map[code] = (float(lat), float(lon))
 
     for row in rows:
-        id = str(row[0])
-        code = row[1]
+        id = row[0]
+        code = overrides.get(row[1], row[1])
 
         if code not in map:
-            print(f"SKIPPED {code}")
             continue
         lat, lon = map[code]
 
@@ -86,10 +86,33 @@ def ingest(database_url: str) -> None:
     logger.info("Starting building ingestion")
 
     buildings = fetch_buildings(database_url)
-    # print(buildings)
-    
-    # with psycopg.connect(database_url) as conn, conn.transaction():
-    #     pass
+
+    with psycopg.connect(database_url) as conn:
+        conn.execute(
+            """
+            UPDATE buildings AS b
+            SET
+                code = v.code,
+                latitude = v.latitude,
+                longitude = v.longitude
+            FROM unnest(
+                %s::uuid[],
+                %s::text[],
+                %s::numeric[],
+                %s::numeric[]
+            ) AS v(id, code, latitude, longitude)
+            WHERE b.id = v.id;
+            """,
+            (
+                [b.id for b in buildings],
+                [b.code for b in buildings],
+                [b.latitude for b in buildings],
+                [b.longitude for b in buildings],
+            ),
+        )
+
+    logger.info(f"Updated information for {len(buildings)} buildings")
+
 
 def main() -> None:
     args = parse_args()
