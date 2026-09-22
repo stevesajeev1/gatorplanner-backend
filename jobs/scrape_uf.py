@@ -73,7 +73,7 @@ def get_term(term_id: int) -> str:
     for term, code in TERM_CODES.items():
         if term_code == int(code):
             return term
-    raise Exception(f"Term could not be detected for {term_id}")
+    raise ValueError(f"Term could not be detected for {term_id}")
 
 
 def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
