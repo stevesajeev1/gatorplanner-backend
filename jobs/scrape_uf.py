@@ -68,12 +68,12 @@ def get_term_id(term: str, year: int) -> int:
     return int(f"2{year:02d}{TERM_CODES[term]}")
 
 
-def get_term(term_id: int) -> str | None:
+def get_term(term_id: int) -> str:
     term_code = term_id % 10
     for term, code in TERM_CODES.items():
         if term_code == int(code):
             return term
-    return None
+    raise Exception(f"Term could not be detected for {term_id}")
 
 
 def fetch_courses(term_id: int, authenticated: bool) -> list[dict]:
@@ -224,18 +224,12 @@ def parse_times_periods(
     if time_begin and time_end and period_begin and period_end:
         return (time_begin, time_end, period_begin, period_end)
 
-    if time_begin and time_end:
-        term = get_term(term_id)
-        if not term:
-            return None, None, None, None
+    term = get_term(term_id)
+    is_summer = term == "summer"
+    period_begin = parse_period(time_begin, is_summer)
+    period_end = parse_period(time_end, is_summer)
 
-        is_summer = term == "summer"
-        period_begin = parse_period(time_begin, is_summer)
-        period_end = parse_period(time_end, is_summer)
-
-        return (time_begin, time_end, period_begin, period_end)
-
-    return (None, None, None, None)
+    return (time_begin, time_end, period_begin, period_end)
 
 
 def parse_time(value: str) -> time:
@@ -389,10 +383,10 @@ def upsert_course(
 
     is_honors = first_section.get("isHonorsClass", False)
 
-    conn.execute(
+    row = conn.execute(
         """
         INSERT INTO courses (
-            id,
+            uf_id,
             term_id,
             code,
             name,
@@ -427,10 +421,8 @@ def upsert_course(
             %s,
             %s
         )
-        ON CONFLICT (id, term_id)
+        ON CONFLICT (uf_id, term_id, code, name)
         DO UPDATE SET
-            code = EXCLUDED.code,
-            name = EXCLUDED.name,
             description = EXCLUDED.description,
             syllabus = EXCLUDED.syllabus,
             prerequisites = EXCLUDED.prerequisites,
@@ -443,6 +435,7 @@ def upsert_course(
             is_ai = EXCLUDED.is_ai,
             is_honors = EXCLUDED.is_honors,
             ingestion_run_id = EXCLUDED.ingestion_run_id
+        RETURNING id
         """,
         (
             int(course["courseId"]),
@@ -462,13 +455,14 @@ def upsert_course(
             is_honors,
             ingestion_run_id,
         ),
-    )
+    ).fetchone()
+    assert row is not None
 
     for section in sections:
         upsert_class(
             authenticated,
             conn,
-            course,
+            row[0],
             section,
             term_id,
             ingestion_run_id,
@@ -478,12 +472,11 @@ def upsert_course(
 def upsert_class(
     authenticated: bool,
     conn: psycopg.Connection,
-    course: dict[str, Any],
+    course_id: str,
     section: dict[str, Any],
     term_id: int,
     ingestion_run_id: str,
 ) -> None:
-    course_id = int(course["courseId"])
     class_number = int(section["classNumber"])
 
     meet_type = parse_meet_type(section["sectWeb"])
