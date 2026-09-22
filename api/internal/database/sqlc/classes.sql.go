@@ -29,10 +29,12 @@ SELECT
                     'period_end', cmt.period_end,
                     'building',
                     CASE
-                        WHEN cmt.room IS NOT NULL
-                            AND cmt.room <> ''
-                        THEN b.name || ' ' || cmt.room
-                        ELSE b.code
+                        WHEN b.id IS NULL THEN NULL
+                        ELSE jsonb_build_object(
+                            'name', b.name,
+                            'code', b.code,
+                            'room', NULLIF(TRIM(cmt.room), '')
+                        )
                     END
                 )
             )

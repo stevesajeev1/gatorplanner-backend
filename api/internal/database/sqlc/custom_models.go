@@ -79,13 +79,20 @@ func (t timeOfDay) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Format("15:04:05"))
 }
 
+type CustomBuilding struct {
+	_    struct{} `nullable:"true"`
+	Name string   `json:"name"`
+	Code string   `json:"code"`
+	Room *string  `json:"room"`
+}
+
 type CustomMeetTime struct {
-	Days        []MeetDayType `json:"days" nullable:"false"`
-	TimeStart   timeOfDay     `json:"time_start"`
-	TimeEnd     timeOfDay     `json:"time_end"`
-	PeriodStart string        `json:"period_start"`
-	PeriodEnd   string        `json:"period_end"`
-	Building    string        `json:"building"`
+	Days        []MeetDayType   `json:"days" nullable:"false"`
+	TimeStart   timeOfDay       `json:"time_start"`
+	TimeEnd     timeOfDay       `json:"time_end"`
+	PeriodStart string          `json:"period_start"`
+	PeriodEnd   string          `json:"period_end"`
+	Building    *CustomBuilding `json:"building"`
 }
 
 type CustomInstructor struct {
