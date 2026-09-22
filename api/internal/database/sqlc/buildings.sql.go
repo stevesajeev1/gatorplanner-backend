@@ -7,25 +7,45 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listBuildings = `-- name: ListBuildings :many
-SELECT DISTINCT name FROM buildings ORDER BY name ASC
+SELECT
+    name,
+    code,
+    latitude,
+    longitude
+FROM buildings
+ORDER BY name ASC
 `
 
-func (q *Queries) ListBuildings(ctx context.Context) ([]string, error) {
+type ListBuildingsRow struct {
+	Name      string         `json:"name"`
+	Code      string         `json:"code"`
+	Latitude  pgtype.Numeric `json:"latitude"`
+	Longitude pgtype.Numeric `json:"longitude"`
+}
+
+func (q *Queries) ListBuildings(ctx context.Context) ([]ListBuildingsRow, error) {
 	rows, err := q.db.Query(ctx, listBuildings)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []string{}
+	items := []ListBuildingsRow{}
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
+		var i ListBuildingsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.Code,
+			&i.Latitude,
+			&i.Longitude,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, name)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

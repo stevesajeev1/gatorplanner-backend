@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/dependencies"
 )
 
@@ -16,6 +17,6 @@ func NewBuildingsRepository(db *dependencies.DB) *BuildingsRepository {
 
 func (r *BuildingsRepository) ListBuildings(
 	ctx context.Context,
-) ([]string, error) {
+) ([]sqlc.ListBuildingsRow, error) {
 	return r.db.Query.ListBuildings(ctx)
 }

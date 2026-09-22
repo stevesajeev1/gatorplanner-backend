@@ -291,9 +291,11 @@ func (ns NullQuest) Value() (driver.Value, error) {
 }
 
 type Building struct {
-	ID   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
-	Code string    `json:"code"`
+	ID        uuid.UUID      `json:"id"`
+	Name      string         `json:"name"`
+	Code      string         `json:"code"`
+	Latitude  pgtype.Numeric `json:"latitude"`
+	Longitude pgtype.Numeric `json:"longitude"`
 }
 
 type Class struct {

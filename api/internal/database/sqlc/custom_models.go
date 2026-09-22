@@ -135,3 +135,40 @@ func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
 	}
 	return typedClasses, nil
 }
+
+type RawListBuildingsRows []ListBuildingsRow
+
+type TypedListBuildingsRow struct {
+	ListBuildingsRow
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+}
+
+func (r RawListBuildingsRows) Typed() ([]TypedListBuildingsRow, error) {
+	typedBuildings := make([]TypedListBuildingsRow, len(r))
+	for i, rawBuilding := range r {
+		var latitude *float64 = nil
+		if rawBuilding.Latitude.Valid {
+			value, err := rawBuilding.Latitude.Float64Value()
+			if err != nil {
+				return nil, fmt.Errorf("convert latitude for building %s: %w", rawBuilding.Name, err)
+			}
+			latitude = &value.Float64
+		}
+		var longitude *float64 = nil
+		if rawBuilding.Longitude.Valid {
+			value, err := rawBuilding.Longitude.Float64Value()
+			if err != nil {
+				return nil, fmt.Errorf("convert longitude for building %s: %w", rawBuilding.Name, err)
+			}
+			longitude = &value.Float64
+		}
+
+		typedBuildings[i] = TypedListBuildingsRow{
+			ListBuildingsRow: rawBuilding,
+			Latitude:         latitude,
+			Longitude:        longitude,
+		}
+	}
+	return typedBuildings, nil
+}
