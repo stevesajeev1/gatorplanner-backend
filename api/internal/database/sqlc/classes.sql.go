@@ -112,14 +112,25 @@ const listClassesForScheduler = `-- name: ListClassesForScheduler :many
 SELECT
     cl.course_id,
     cl.id AS class_id,
-    cmt.days,
+    to_jsonb(cmt.days) AS days,
     cmt.time_begin,
-    cmt.time_end
+    cmt.time_end,
+    b.latitude AS building_latitude,
+    b.longitude AS building_longitude,
+    (
+        SELECT AVG(i.rating)::numeric
+        FROM class_instructors ci
+        JOIN instructors i
+            ON i.id = ci.instructor_id
+        WHERE ci.class_id = cl.id
+    ) AS avg_instructor_rating
 FROM unnest($1::uuid[]) WITH ORDINALITY AS ids(id, ord)
 JOIN classes cl
     ON cl.id = ids.id
 LEFT JOIN class_meet_times cmt
     ON cmt.class_id = cl.id
+LEFT JOIN buildings b
+    ON b.id = cmt.building_id
 WHERE cl.term_id = $2
 ORDER BY ids.ord
 `
@@ -130,11 +141,14 @@ type ListClassesForSchedulerParams struct {
 }
 
 type ListClassesForSchedulerRow struct {
-	CourseID  uuid.UUID     `json:"course_id"`
-	ClassID   uuid.UUID     `json:"class_id"`
-	Days      []MeetDayType `json:"days"`
-	TimeBegin pgtype.Time   `json:"time_begin"`
-	TimeEnd   pgtype.Time   `json:"time_end"`
+	CourseID            uuid.UUID      `json:"course_id"`
+	ClassID             uuid.UUID      `json:"class_id"`
+	Days                []byte         `json:"days"`
+	TimeBegin           pgtype.Time    `json:"time_begin"`
+	TimeEnd             pgtype.Time    `json:"time_end"`
+	BuildingLatitude    pgtype.Numeric `json:"building_latitude"`
+	BuildingLongitude   pgtype.Numeric `json:"building_longitude"`
+	AvgInstructorRating pgtype.Numeric `json:"avg_instructor_rating"`
 }
 
 func (q *Queries) ListClassesForScheduler(ctx context.Context, arg ListClassesForSchedulerParams) ([]ListClassesForSchedulerRow, error) {
@@ -152,6 +166,9 @@ func (q *Queries) ListClassesForScheduler(ctx context.Context, arg ListClassesFo
 			&i.Days,
 			&i.TimeBegin,
 			&i.TimeEnd,
+			&i.BuildingLatitude,
+			&i.BuildingLongitude,
+			&i.AvgInstructorRating,
 		); err != nil {
 			return nil, err
 		}

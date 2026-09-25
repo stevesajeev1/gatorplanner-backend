@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/util"
 )
 
 var ValidMeetTypes = []ClassMeetType{ClassMeetTypePrimarilyClassroom, ClassMeetTypeHybrid, ClassMeetTypeOnline8099, ClassMeetTypeOnline100}
@@ -11,6 +14,13 @@ var ValidGenEds = []GenEd{GenEdBiologicalScience, GenEdPhysicalScience, GenEdSoc
 var ValidQuests = []Quest{QuestQuest1, QuestQuest2, QuestQuest3, QuestQuest4}
 var ValidMeetDays = []MeetDayType{MeetDayTypeM, MeetDayTypeT, MeetDayTypeW, MeetDayTypeR, MeetDayTypeF, MeetDayTypeS, MeetDayTypeU}
 var ValidPeriods = []Period{Period1, Period2, Period3, Period4, Period5, Period6, Period7, Period8, Period9, Period10, Period11, PeriodE1, PeriodE2, PeriodE3}
+
+func (MeetDayType) Schema(r huma.Registry) *huma.Schema {
+	return &huma.Schema{
+		Type: huma.TypeString,
+		Enum: util.AnyStringSlice(ValidMeetDays),
+	}
+}
 
 type RawListCoursesByIDRows []ListCoursesByIDRow
 
@@ -178,4 +188,29 @@ func (r RawListBuildingsRows) Typed() ([]TypedListBuildingsRow, error) {
 		}
 	}
 	return typedBuildings, nil
+}
+
+type RawListClassesForSchedulerRows []ListClassesForSchedulerRow
+
+type TypedListClassesForSchedulerRow struct {
+	ListClassesForSchedulerRow
+	Days []MeetDayType `json:"days"`
+}
+
+func (r RawListClassesForSchedulerRows) Typed() ([]TypedListClassesForSchedulerRow, error) {
+	typedClasses := make([]TypedListClassesForSchedulerRow, len(r))
+	for i, rawClass := range r {
+		var days []MeetDayType = nil
+		if rawClass.Days != nil {
+			if err := json.Unmarshal(rawClass.Days, &days); err != nil {
+				return nil, fmt.Errorf("unmarshal days for class %s: %w", rawClass.Days, err)
+			}
+		}
+
+		typedClasses[i] = TypedListClassesForSchedulerRow{
+			ListClassesForSchedulerRow: rawClass,
+			Days:                       days,
+		}
+	}
+	return typedClasses, nil
 }
