@@ -19,7 +19,7 @@ jobs:
       - name: Check linting/formatting
         uses: bufbuild/buf-action@v1
         with:
-          working-directory: api
+          input: api
           breaking: false
           push: false
           archive: false
