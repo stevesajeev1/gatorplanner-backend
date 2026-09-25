@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL      string   `env:"DATABASE_URL"`
 	ElasticsearchURL string   `env:"ELASTICSEARCH_URL"`
 	AllowedOrigins   []string `env:"ALLOWED_ORIGINS" envSeparator:","`
+	OptimizerURL     string   `env:"OPTIMIZER_URL"`
 }
 
 func LoadConfig() *Config {

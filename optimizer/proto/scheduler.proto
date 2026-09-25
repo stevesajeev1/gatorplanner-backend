@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package scheduler.v1;
+
+service SchedulerService {
+  rpc GenerateSchedules(GenerateSchedulesRequest) returns (GenerateSchedulesResponse);
+}
+
+message GenerateSchedulesRequest {
+  repeated Course courses = 1;
+  repeated Day day_restrictions = 2;
+  optional SortBy sort_by = 3;
+}
+
+message Course {
+  string course_id = 1;
+  repeated Class classes = 2;
+}
+
+message Class {
+  string class_id = 1;
+  repeated Meeting meetings = 2;
+  optional double avg_instructor_rating = 3;
+}
+
+message Meeting {
+  repeated Day days = 1;
+  int32 start_minute = 2;
+  int32 end_minute = 3;
+  optional double building_longitude = 4;
+  optional double building_latitude = 5;
+}
+
+enum Day {
+  DAY_UNSPECIFIED = 0;
+  DAY_MONDAY = 1;
+  DAY_TUESDAY = 2;
+  DAY_WEDNESDAY = 3;
+  DAY_THURSDAY = 4;
+  DAY_FRIDAY = 5;
+  DAY_SATURDAY = 6;
+  DAY_SUNDAY = 7;
+}
+
+enum SortBy {
+  SORT_BY_UNSPECIFIED = 0;
+  SORT_BY_EARLIEST_START = 1;
+  SORT_BY_LATEST_START = 2;
+  SORT_BY_EARLIEST_END = 3;
+  SORT_BY_LATEST_END = 4;
+  SORT_BY_MOST_COMPACT = 5;
+  SORT_BY_FEWEST_DAYS = 6;
+  SORT_BY_MOST_BALANCED = 7;
+  SORT_BY_INSTRUCTOR_RATING = 8;
+}
+
+message GenerateSchedulesResponse {
+  repeated Schedule schedules = 1;
+}
+
+message Schedule {
+  repeated SelectedClass classes = 1;
+}
+
+message SelectedClass {
+  string course_id = 1;
+  string class_id = 2;
+}

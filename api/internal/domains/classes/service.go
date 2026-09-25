@@ -38,7 +38,7 @@ func NewService(
 
 func (s *ClassesService) Search(
 	ctx context.Context,
-	termID int64,
+	termID int32,
 	request *SearchClassesRequest,
 	limit uint,
 	offset uint,

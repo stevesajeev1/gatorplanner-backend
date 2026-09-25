@@ -1,0 +1,26 @@
+name: Protobuf Linting/Formatting
+
+on:
+  pull_request:
+    paths:
+      - "api/proto/**"
+      - "api/buf.gen.yaml"
+      - "api/buf.yaml"
+      - ".github/workflows/proto-styling.yml"
+
+jobs:
+  buf:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check linting/formatting
+        uses: bufbuild/buf-action@v1
+        with:
+          input: api
+          breaking: false
+          push: false
+          archive: false
+          pr_comment: false

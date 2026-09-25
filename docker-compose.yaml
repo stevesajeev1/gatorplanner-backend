@@ -10,6 +10,7 @@ services:
     depends_on:
       - postgres
       - elasticsearch
+      - optimizer
 
   postgres:
     image: postgres:18.4
@@ -36,27 +37,21 @@ services:
     attach: false
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 20s
 
-  elasticsearch-init:
-    image: curlimages/curl:8.21.0
-    container_name: elasticsearch-init
-    user: root
-    entrypoint: ["/bin/sh", "/init.sh"]
-    volumes:
-      - ./elasticsearch/init.sh:/init.sh:ro
-      - ./elasticsearch/indexes:/indexes:ro
-      - elasticsearch-init_state:/state
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+  optimizer:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./optimizer
+    ports:
+      - 50051:50051
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./optimizer/src
+          target: /app/src
+        - action: rebuild
+          path: ./optimizer/pyproject.toml
 
 volumes:
   postgres_data:
   elasticsearch_data:
-  elasticsearch-init_state:

@@ -318,7 +318,7 @@ type SearchClassResultItem struct {
 
 func (r *ClassesESRepository) Search(
 	ctx context.Context,
-	termID int64,
+	termID int32,
 	search *string,
 	filter *search.Filter,
 	limit uint,
@@ -332,7 +332,7 @@ func (r *ClassesESRepository) Search(
 
 	termFilter := esdsl.NewTermQuery(
 		"term_id",
-		esdsl.NewFieldValue().Int64(termID),
+		esdsl.NewFieldValue().Int64(int64(termID)),
 	)
 
 	if filter != nil {

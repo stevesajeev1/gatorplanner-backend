@@ -1,0 +1,23 @@
+[project]
+name = "optimizer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "betterproto2-compiler>=0.10.1",
+    "betterproto2[grpclib]>=0.10.0",
+    "grpcio-tools>=1.83.1",
+    "ortools>=9.10.4067",
+    "python-dotenv>=1.2.3",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.6",
+]
+
+[tool.ruff]
+exclude = [
+    "src/generated/",
+]

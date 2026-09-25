@@ -24,7 +24,7 @@ func NewHandler(classesService *ClassesService, logger zerolog.Logger) *handler 
 func (h *handler) searchClasses(
 	ctx context.Context,
 	input *struct {
-		TermID int64 `path:"termID"`
+		TermID int32 `path:"termID"`
 		Body   SearchClassesRequest
 		shared.PaginationParams
 	},

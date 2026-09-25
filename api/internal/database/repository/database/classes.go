@@ -22,3 +22,25 @@ func (r *ClassesRepository) ListClassesByID(
 ) ([]sqlc.ListClassesByIDRow, error) {
 	return r.db.Query.ListClassesByID(ctx, ids)
 }
+
+func (r *ClassesRepository) ValidateClassesForTerm(
+	ctx context.Context,
+	termID int32,
+	ids []uuid.UUID,
+) ([]uuid.UUID, error) {
+	return r.db.Query.ValidateClassesForTerm(ctx, sqlc.ValidateClassesForTermParams{
+		TermID:   termID,
+		ClassIds: ids,
+	})
+}
+
+func (r *ClassesRepository) ListClassesForScheduler(
+	ctx context.Context,
+	termID int32,
+	ids []uuid.UUID,
+) ([]sqlc.ListClassesForSchedulerRow, error) {
+	return r.db.Query.ListClassesForScheduler(ctx, sqlc.ListClassesForSchedulerParams{
+		TermID:   termID,
+		ClassIds: ids,
+	})
+}
