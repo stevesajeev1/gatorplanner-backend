@@ -7,14 +7,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	schedulerv1 "github.com/stevesajeev1/gatorplanner-backend/generated/scheduler/v1"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/database"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/repository/optimizer"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
 )
 
 var (
-	ErrCourseMustProvideChoices = errors.New("course must provide one or more class choices")
-	ErrInvalidCourses           = errors.New("invalid courses")
-	ErrInvalidClasses           = errors.New("invalid classes")
+	ErrInvalidClasses = errors.New("invalid classes")
 )
 
 type SchedulesService struct {
@@ -45,15 +45,8 @@ func (s *SchedulesService) Generate(
 	limit uint,
 	offset uint,
 ) ([]Schedule, error) {
-	if err := request.Validate(); err != nil {
-		return nil, err
-	}
-
 	classIDs := []uuid.UUID{}
-	for _, course := range request.FixedCourses {
-		classIDs = append(classIDs, course.ClassID)
-	}
-	for _, choice := range request.CourseChoices {
+	for _, choice := range request.ClassChoices {
 		for _, classID := range choice.ClassIDs {
 			classIDs = append(classIDs, classID)
 		}
@@ -84,29 +77,47 @@ func (s *SchedulesService) Generate(
 	}
 
 	// Get required information for schedule generation
-	classes, err := s.classesDBRepo.ListClassesForScheduler(ctx, termID, validClassIDs)
+	rawClasses, err := s.classesDBRepo.ListClassesForScheduler(ctx, termID, validClassIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	generated, err := s.schedulesOptimizerRepo.GenerateSchedules(ctx, classes)
+	classes, err := sqlc.RawListClassesForSchedulerRows(rawClasses).Typed()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert SortBy
+	var sortBy *schedulerv1.SortBy = nil
+	if request.SortBy != nil {
+		for key, value := range SortByMap {
+			if *request.SortBy == value {
+				sortBy = &key
+				break
+			}
+		}
+	}
+
+	// TODO: Cache in Redis
+	generated, err := s.schedulesOptimizerRepo.GenerateSchedules(ctx, classes, sortBy, request.DayRestrictions)
 	if err != nil {
 		return nil, err
 	}
 
 	schedules := make([]Schedule, len(generated.Schedules))
 	for i, schedule := range generated.Schedules {
-		courses := make([]FixedCourse, len(schedule.Classes))
+		classes := make([]SelectedClass, len(schedule.Classes))
 		for j, class := range schedule.Classes {
-			courses[j] = FixedCourse{
-				CourseID: class.CourseId,
+			classes[j] = SelectedClass{
+				CourseID: uuid.MustParse(class.CourseId),
 				ClassID:  uuid.MustParse(class.ClassId),
 			}
 		}
 		schedules[i] = Schedule{
-			Courses: courses,
+			Classes: classes,
 		}
 	}
 
+	// TODO: Implement pagination
 	return schedules, nil
 }

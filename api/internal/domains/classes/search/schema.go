@@ -3,6 +3,7 @@ package search
 import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/util"
 )
 
 func RegisterCustomSchemas(r huma.Registry) {
@@ -35,11 +36,11 @@ func (Rule) ClassMeetTypeTextSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(sqlc.ValidMeetTypes),
+				Enum: util.AnyStringSlice(sqlc.ValidMeetTypes),
 			},
 		},
 		Required: []string{
@@ -65,11 +66,11 @@ func (Rule) CourseGenEdsTextSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(sqlc.ValidGenEds),
+				Enum: util.AnyStringSlice(sqlc.ValidGenEds),
 			},
 		},
 		Required: []string{
@@ -95,11 +96,11 @@ func (Rule) CourseQuestTextSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(sqlc.ValidQuests),
+				Enum: util.AnyStringSlice(sqlc.ValidQuests),
 			},
 		},
 		Required: []string{
@@ -125,11 +126,11 @@ func (Rule) CourseMeetDaysTextSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(sqlc.ValidMeetDays),
+				Enum: util.AnyStringSlice(sqlc.ValidMeetDays),
 			},
 		},
 		Required: []string{
@@ -147,7 +148,7 @@ func (Rule) GeneralTextSchema(r huma.Registry) *huma.Schema {
 		Properties: map[string]*huma.Schema{
 			"field": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidGeneralTextFields),
+				Enum: util.AnyStringSlice(ValidGeneralTextFields),
 			},
 			"type": {
 				Type: huma.TypeString,
@@ -155,7 +156,7 @@ func (Rule) GeneralTextSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
@@ -206,11 +207,11 @@ func (Rule) PeriodNumberSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidNumberFilters),
+				Enum: util.AnyStringSlice(ValidNumberFilters),
 			},
 			"value": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(sqlc.ValidPeriods),
+				Enum: util.AnyStringSlice(sqlc.ValidPeriods),
 			},
 		},
 		Required: []string{
@@ -228,7 +229,7 @@ func (Rule) GeneralNumberSchema(r huma.Registry) *huma.Schema {
 		Properties: map[string]*huma.Schema{
 			"field": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidGeneralNumberFields),
+				Enum: util.AnyStringSlice(ValidGeneralNumberFields),
 			},
 			"type": {
 				Type: huma.TypeString,
@@ -236,7 +237,7 @@ func (Rule) GeneralNumberSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidNumberFilters),
+				Enum: util.AnyStringSlice(ValidNumberFilters),
 			},
 			"value": {
 				Type: huma.TypeNumber,
@@ -270,7 +271,7 @@ func (Rule) TimeSchema(r huma.Registry) *huma.Schema {
 		Properties: map[string]*huma.Schema{
 			"field": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidTimeFields),
+				Enum: util.AnyStringSlice(ValidTimeFields),
 			},
 			"type": {
 				Type: huma.TypeString,
@@ -278,7 +279,7 @@ func (Rule) TimeSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidNumberFilters),
+				Enum: util.AnyStringSlice(ValidNumberFilters),
 			},
 			"value": {
 				Type:   huma.TypeString,
@@ -300,7 +301,7 @@ func (Rule) BooleanSchema(r huma.Registry) *huma.Schema {
 		Properties: map[string]*huma.Schema{
 			"field": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidBooleanFields),
+				Enum: util.AnyStringSlice(ValidBooleanFields),
 			},
 			"type": {
 				Type: huma.TypeString,
@@ -308,7 +309,7 @@ func (Rule) BooleanSchema(r huma.Registry) *huma.Schema {
 			},
 			"filter": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice(ValidFilters),
+				Enum: util.AnyStringSlice(ValidFilters),
 			},
 			"value": {
 				Type: huma.TypeBoolean,
@@ -348,7 +349,7 @@ func (Filter) Schema(r huma.Registry) *huma.Schema {
 		Properties: map[string]*huma.Schema{
 			"glue": {
 				Type: huma.TypeString,
-				Enum: anyStringSlice([]Glue{GlueAnd, GlueOr}),
+				Enum: util.AnyStringSlice([]Glue{GlueAnd, GlueOr}),
 			},
 			"rules": {
 				Type:     huma.TypeArray,
@@ -367,12 +368,4 @@ func (Filter) Schema(r huma.Registry) *huma.Schema {
 		},
 		Required: []string{"glue", "rules"},
 	}
-}
-
-func anyStringSlice[T ~string](slice []T) []any {
-	result := make([]any, len(slice))
-	for i, v := range slice {
-		result[i] = string(v)
-	}
-	return result
 }

@@ -37,9 +37,7 @@ func (h *handler) generateSchedules(
 }
 
 func (h *handler) schedulesHTTPError(err error, fallback string) error {
-	if errors.Is(err, ErrCourseMustProvideChoices) ||
-		errors.Is(err, ErrInvalidCourses) ||
-		errors.Is(err, ErrInvalidClasses) {
+	if errors.Is(err, ErrInvalidClasses) {
 		return huma.Error400BadRequest(err.Error())
 	}
 
