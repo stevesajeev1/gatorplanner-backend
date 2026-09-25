@@ -47,9 +47,7 @@ func (s *SchedulesService) Generate(
 ) ([]Schedule, error) {
 	classIDs := []uuid.UUID{}
 	for _, choice := range request.ClassChoices {
-		for _, classID := range choice.ClassIDs {
-			classIDs = append(classIDs, classID)
-		}
+		classIDs = append(classIDs, choice.ClassIDs...)
 	}
 
 	// Verify all class IDs exist for term
