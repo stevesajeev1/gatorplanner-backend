@@ -85,11 +85,80 @@ func (Day) EnumDescriptor() ([]byte, []int) {
 	return file_scheduler_v1_scheduler_proto_rawDescGZIP(), []int{0}
 }
 
+type SortBy int32
+
+const (
+	SortBy_SORT_BY_UNSPECIFIED       SortBy = 0
+	SortBy_SORT_BY_EARLIEST_START    SortBy = 1
+	SortBy_SORT_BY_LATEST_START      SortBy = 2
+	SortBy_SORT_BY_EARLIEST_END      SortBy = 3
+	SortBy_SORT_BY_LATEST_END        SortBy = 4
+	SortBy_SORT_BY_MOST_COMPACT      SortBy = 5
+	SortBy_SORT_BY_FEWEST_DAYS       SortBy = 6
+	SortBy_SORT_BY_MOST_BALANCED     SortBy = 7
+	SortBy_SORT_BY_INSTRUCTOR_RATING SortBy = 8
+)
+
+// Enum value maps for SortBy.
+var (
+	SortBy_name = map[int32]string{
+		0: "SORT_BY_UNSPECIFIED",
+		1: "SORT_BY_EARLIEST_START",
+		2: "SORT_BY_LATEST_START",
+		3: "SORT_BY_EARLIEST_END",
+		4: "SORT_BY_LATEST_END",
+		5: "SORT_BY_MOST_COMPACT",
+		6: "SORT_BY_FEWEST_DAYS",
+		7: "SORT_BY_MOST_BALANCED",
+		8: "SORT_BY_INSTRUCTOR_RATING",
+	}
+	SortBy_value = map[string]int32{
+		"SORT_BY_UNSPECIFIED":       0,
+		"SORT_BY_EARLIEST_START":    1,
+		"SORT_BY_LATEST_START":      2,
+		"SORT_BY_EARLIEST_END":      3,
+		"SORT_BY_LATEST_END":        4,
+		"SORT_BY_MOST_COMPACT":      5,
+		"SORT_BY_FEWEST_DAYS":       6,
+		"SORT_BY_MOST_BALANCED":     7,
+		"SORT_BY_INSTRUCTOR_RATING": 8,
+	}
+)
+
+func (x SortBy) Enum() *SortBy {
+	p := new(SortBy)
+	*p = x
+	return p
+}
+
+func (x SortBy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SortBy) Descriptor() protoreflect.EnumDescriptor {
+	return file_scheduler_v1_scheduler_proto_enumTypes[1].Descriptor()
+}
+
+func (SortBy) Type() protoreflect.EnumType {
+	return &file_scheduler_v1_scheduler_proto_enumTypes[1]
+}
+
+func (x SortBy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SortBy.Descriptor instead.
+func (SortBy) EnumDescriptor() ([]byte, []int) {
+	return file_scheduler_v1_scheduler_proto_rawDescGZIP(), []int{1}
+}
+
 type GenerateSchedulesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Courses       []*Course              `protobuf:"bytes,1,rep,name=courses,proto3" json:"courses,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Courses         []*Course              `protobuf:"bytes,1,rep,name=courses,proto3" json:"courses,omitempty"`
+	DayRestrictions []Day                  `protobuf:"varint,2,rep,packed,name=day_restrictions,json=dayRestrictions,proto3,enum=scheduler.v1.Day" json:"day_restrictions,omitempty"`
+	SortBy          *SortBy                `protobuf:"varint,3,opt,name=sort_by,json=sortBy,proto3,enum=scheduler.v1.SortBy,oneof" json:"sort_by,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GenerateSchedulesRequest) Reset() {
@@ -129,9 +198,23 @@ func (x *GenerateSchedulesRequest) GetCourses() []*Course {
 	return nil
 }
 
+func (x *GenerateSchedulesRequest) GetDayRestrictions() []Day {
+	if x != nil {
+		return x.DayRestrictions
+	}
+	return nil
+}
+
+func (x *GenerateSchedulesRequest) GetSortBy() SortBy {
+	if x != nil && x.SortBy != nil {
+		return *x.SortBy
+	}
+	return SortBy_SORT_BY_UNSPECIFIED
+}
+
 type Course struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseId      int32                  `protobuf:"varint,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
 	Classes       []*Class               `protobuf:"bytes,2,rep,name=classes,proto3" json:"classes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -167,11 +250,11 @@ func (*Course) Descriptor() ([]byte, []int) {
 	return file_scheduler_v1_scheduler_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Course) GetCourseId() int32 {
+func (x *Course) GetCourseId() string {
 	if x != nil {
 		return x.CourseId
 	}
-	return 0
+	return ""
 }
 
 func (x *Course) GetClasses() []*Class {
@@ -182,11 +265,12 @@ func (x *Course) GetClasses() []*Class {
 }
 
 type Class struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ClassId       string                 `protobuf:"bytes,1,opt,name=class_id,json=classId,proto3" json:"class_id,omitempty"`
-	Meetings      []*Meeting             `protobuf:"bytes,2,rep,name=meetings,proto3" json:"meetings,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ClassId             string                 `protobuf:"bytes,1,opt,name=class_id,json=classId,proto3" json:"class_id,omitempty"`
+	Meetings            []*Meeting             `protobuf:"bytes,2,rep,name=meetings,proto3" json:"meetings,omitempty"`
+	AvgInstructorRating *float64               `protobuf:"fixed64,3,opt,name=avg_instructor_rating,json=avgInstructorRating,proto3,oneof" json:"avg_instructor_rating,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Class) Reset() {
@@ -233,13 +317,22 @@ func (x *Class) GetMeetings() []*Meeting {
 	return nil
 }
 
+func (x *Class) GetAvgInstructorRating() float64 {
+	if x != nil && x.AvgInstructorRating != nil {
+		return *x.AvgInstructorRating
+	}
+	return 0
+}
+
 type Meeting struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Days          []Day                  `protobuf:"varint,1,rep,packed,name=days,proto3,enum=scheduler.v1.Day" json:"days,omitempty"`
-	StartMinute   int32                  `protobuf:"varint,2,opt,name=start_minute,json=startMinute,proto3" json:"start_minute,omitempty"`
-	EndMinute     int32                  `protobuf:"varint,3,opt,name=end_minute,json=endMinute,proto3" json:"end_minute,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Days              []Day                  `protobuf:"varint,1,rep,packed,name=days,proto3,enum=scheduler.v1.Day" json:"days,omitempty"`
+	StartMinute       int32                  `protobuf:"varint,2,opt,name=start_minute,json=startMinute,proto3" json:"start_minute,omitempty"`
+	EndMinute         int32                  `protobuf:"varint,3,opt,name=end_minute,json=endMinute,proto3" json:"end_minute,omitempty"`
+	BuildingLongitude *float64               `protobuf:"fixed64,4,opt,name=building_longitude,json=buildingLongitude,proto3,oneof" json:"building_longitude,omitempty"`
+	BuildingLatitude  *float64               `protobuf:"fixed64,5,opt,name=building_latitude,json=buildingLatitude,proto3,oneof" json:"building_latitude,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Meeting) Reset() {
@@ -289,6 +382,20 @@ func (x *Meeting) GetStartMinute() int32 {
 func (x *Meeting) GetEndMinute() int32 {
 	if x != nil {
 		return x.EndMinute
+	}
+	return 0
+}
+
+func (x *Meeting) GetBuildingLongitude() float64 {
+	if x != nil && x.BuildingLongitude != nil {
+		return *x.BuildingLongitude
+	}
+	return 0
+}
+
+func (x *Meeting) GetBuildingLatitude() float64 {
+	if x != nil && x.BuildingLatitude != nil {
+		return *x.BuildingLatitude
 	}
 	return 0
 }
@@ -383,7 +490,7 @@ func (x *Schedule) GetClasses() []*SelectedClass {
 
 type SelectedClass struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CourseId      int32                  `protobuf:"varint,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
+	CourseId      string                 `protobuf:"bytes,1,opt,name=course_id,json=courseId,proto3" json:"course_id,omitempty"`
 	ClassId       string                 `protobuf:"bytes,2,opt,name=class_id,json=classId,proto3" json:"class_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -419,11 +526,11 @@ func (*SelectedClass) Descriptor() ([]byte, []int) {
 	return file_scheduler_v1_scheduler_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *SelectedClass) GetCourseId() int32 {
+func (x *SelectedClass) GetCourseId() string {
 	if x != nil {
 		return x.CourseId
 	}
-	return 0
+	return ""
 }
 
 func (x *SelectedClass) GetClassId() string {
@@ -437,26 +544,36 @@ var File_scheduler_v1_scheduler_proto protoreflect.FileDescriptor
 
 const file_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\n" +
-	"\x1cscheduler/v1/scheduler.proto\x12\fscheduler.v1\"J\n" +
+	"\x1cscheduler/v1/scheduler.proto\x12\fscheduler.v1\"\xc8\x01\n" +
 	"\x18GenerateSchedulesRequest\x12.\n" +
-	"\acourses\x18\x01 \x03(\v2\x14.scheduler.v1.CourseR\acourses\"T\n" +
+	"\acourses\x18\x01 \x03(\v2\x14.scheduler.v1.CourseR\acourses\x12<\n" +
+	"\x10day_restrictions\x18\x02 \x03(\x0e2\x11.scheduler.v1.DayR\x0fdayRestrictions\x122\n" +
+	"\asort_by\x18\x03 \x01(\x0e2\x14.scheduler.v1.SortByH\x00R\x06sortBy\x88\x01\x01B\n" +
+	"\n" +
+	"\b_sort_by\"T\n" +
 	"\x06Course\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\x05R\bcourseId\x12-\n" +
-	"\aclasses\x18\x02 \x03(\v2\x13.scheduler.v1.ClassR\aclasses\"U\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12-\n" +
+	"\aclasses\x18\x02 \x03(\v2\x13.scheduler.v1.ClassR\aclasses\"\xa8\x01\n" +
 	"\x05Class\x12\x19\n" +
 	"\bclass_id\x18\x01 \x01(\tR\aclassId\x121\n" +
-	"\bmeetings\x18\x02 \x03(\v2\x15.scheduler.v1.MeetingR\bmeetings\"r\n" +
+	"\bmeetings\x18\x02 \x03(\v2\x15.scheduler.v1.MeetingR\bmeetings\x127\n" +
+	"\x15avg_instructor_rating\x18\x03 \x01(\x01H\x00R\x13avgInstructorRating\x88\x01\x01B\x18\n" +
+	"\x16_avg_instructor_rating\"\x85\x02\n" +
 	"\aMeeting\x12%\n" +
 	"\x04days\x18\x01 \x03(\x0e2\x11.scheduler.v1.DayR\x04days\x12!\n" +
 	"\fstart_minute\x18\x02 \x01(\x05R\vstartMinute\x12\x1d\n" +
 	"\n" +
-	"end_minute\x18\x03 \x01(\x05R\tendMinute\"Q\n" +
+	"end_minute\x18\x03 \x01(\x05R\tendMinute\x122\n" +
+	"\x12building_longitude\x18\x04 \x01(\x01H\x00R\x11buildingLongitude\x88\x01\x01\x120\n" +
+	"\x11building_latitude\x18\x05 \x01(\x01H\x01R\x10buildingLatitude\x88\x01\x01B\x15\n" +
+	"\x13_building_longitudeB\x14\n" +
+	"\x12_building_latitude\"Q\n" +
 	"\x19GenerateSchedulesResponse\x124\n" +
 	"\tschedules\x18\x01 \x03(\v2\x16.scheduler.v1.ScheduleR\tschedules\"A\n" +
 	"\bSchedule\x125\n" +
 	"\aclasses\x18\x01 \x03(\v2\x1b.scheduler.v1.SelectedClassR\aclasses\"G\n" +
 	"\rSelectedClass\x12\x1b\n" +
-	"\tcourse_id\x18\x01 \x01(\x05R\bcourseId\x12\x19\n" +
+	"\tcourse_id\x18\x01 \x01(\tR\bcourseId\x12\x19\n" +
 	"\bclass_id\x18\x02 \x01(\tR\aclassId*\x92\x01\n" +
 	"\x03Day\x12\x13\n" +
 	"\x0fDAY_UNSPECIFIED\x10\x00\x12\x0e\n" +
@@ -469,7 +586,17 @@ const file_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"DAY_FRIDAY\x10\x05\x12\x10\n" +
 	"\fDAY_SATURDAY\x10\x06\x12\x0e\n" +
 	"\n" +
-	"DAY_SUNDAY\x10\a2x\n" +
+	"DAY_SUNDAY\x10\a*\xf6\x01\n" +
+	"\x06SortBy\x12\x17\n" +
+	"\x13SORT_BY_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16SORT_BY_EARLIEST_START\x10\x01\x12\x18\n" +
+	"\x14SORT_BY_LATEST_START\x10\x02\x12\x18\n" +
+	"\x14SORT_BY_EARLIEST_END\x10\x03\x12\x16\n" +
+	"\x12SORT_BY_LATEST_END\x10\x04\x12\x18\n" +
+	"\x14SORT_BY_MOST_COMPACT\x10\x05\x12\x17\n" +
+	"\x13SORT_BY_FEWEST_DAYS\x10\x06\x12\x19\n" +
+	"\x15SORT_BY_MOST_BALANCED\x10\a\x12\x1d\n" +
+	"\x19SORT_BY_INSTRUCTOR_RATING\x10\b2x\n" +
 	"\x10SchedulerService\x12d\n" +
 	"\x11GenerateSchedules\x12&.scheduler.v1.GenerateSchedulesRequest\x1a'.scheduler.v1.GenerateSchedulesResponseB\xc4\x01\n" +
 	"\x10com.scheduler.v1B\x0eSchedulerProtoP\x01ZOgithub.com/stevesajeev1/gatorplanner-backend/generated/scheduler/v1;schedulerv1\xa2\x02\x03SXX\xaa\x02\fScheduler.V1\xca\x02\fScheduler\\V1\xe2\x02\x18Scheduler\\V1\\GPBMetadata\xea\x02\rScheduler::V1b\x06proto3"
@@ -486,32 +613,35 @@ func file_scheduler_v1_scheduler_proto_rawDescGZIP() []byte {
 	return file_scheduler_v1_scheduler_proto_rawDescData
 }
 
-var file_scheduler_v1_scheduler_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_scheduler_v1_scheduler_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_scheduler_v1_scheduler_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_scheduler_v1_scheduler_proto_goTypes = []any{
 	(Day)(0),                          // 0: scheduler.v1.Day
-	(*GenerateSchedulesRequest)(nil),  // 1: scheduler.v1.GenerateSchedulesRequest
-	(*Course)(nil),                    // 2: scheduler.v1.Course
-	(*Class)(nil),                     // 3: scheduler.v1.Class
-	(*Meeting)(nil),                   // 4: scheduler.v1.Meeting
-	(*GenerateSchedulesResponse)(nil), // 5: scheduler.v1.GenerateSchedulesResponse
-	(*Schedule)(nil),                  // 6: scheduler.v1.Schedule
-	(*SelectedClass)(nil),             // 7: scheduler.v1.SelectedClass
+	(SortBy)(0),                       // 1: scheduler.v1.SortBy
+	(*GenerateSchedulesRequest)(nil),  // 2: scheduler.v1.GenerateSchedulesRequest
+	(*Course)(nil),                    // 3: scheduler.v1.Course
+	(*Class)(nil),                     // 4: scheduler.v1.Class
+	(*Meeting)(nil),                   // 5: scheduler.v1.Meeting
+	(*GenerateSchedulesResponse)(nil), // 6: scheduler.v1.GenerateSchedulesResponse
+	(*Schedule)(nil),                  // 7: scheduler.v1.Schedule
+	(*SelectedClass)(nil),             // 8: scheduler.v1.SelectedClass
 }
 var file_scheduler_v1_scheduler_proto_depIdxs = []int32{
-	2, // 0: scheduler.v1.GenerateSchedulesRequest.courses:type_name -> scheduler.v1.Course
-	3, // 1: scheduler.v1.Course.classes:type_name -> scheduler.v1.Class
-	4, // 2: scheduler.v1.Class.meetings:type_name -> scheduler.v1.Meeting
-	0, // 3: scheduler.v1.Meeting.days:type_name -> scheduler.v1.Day
-	6, // 4: scheduler.v1.GenerateSchedulesResponse.schedules:type_name -> scheduler.v1.Schedule
-	7, // 5: scheduler.v1.Schedule.classes:type_name -> scheduler.v1.SelectedClass
-	1, // 6: scheduler.v1.SchedulerService.GenerateSchedules:input_type -> scheduler.v1.GenerateSchedulesRequest
-	5, // 7: scheduler.v1.SchedulerService.GenerateSchedules:output_type -> scheduler.v1.GenerateSchedulesResponse
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	3, // 0: scheduler.v1.GenerateSchedulesRequest.courses:type_name -> scheduler.v1.Course
+	0, // 1: scheduler.v1.GenerateSchedulesRequest.day_restrictions:type_name -> scheduler.v1.Day
+	1, // 2: scheduler.v1.GenerateSchedulesRequest.sort_by:type_name -> scheduler.v1.SortBy
+	4, // 3: scheduler.v1.Course.classes:type_name -> scheduler.v1.Class
+	5, // 4: scheduler.v1.Class.meetings:type_name -> scheduler.v1.Meeting
+	0, // 5: scheduler.v1.Meeting.days:type_name -> scheduler.v1.Day
+	7, // 6: scheduler.v1.GenerateSchedulesResponse.schedules:type_name -> scheduler.v1.Schedule
+	8, // 7: scheduler.v1.Schedule.classes:type_name -> scheduler.v1.SelectedClass
+	2, // 8: scheduler.v1.SchedulerService.GenerateSchedules:input_type -> scheduler.v1.GenerateSchedulesRequest
+	6, // 9: scheduler.v1.SchedulerService.GenerateSchedules:output_type -> scheduler.v1.GenerateSchedulesResponse
+	9, // [9:10] is the sub-list for method output_type
+	8, // [8:9] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_scheduler_v1_scheduler_proto_init() }
@@ -519,12 +649,15 @@ func file_scheduler_v1_scheduler_proto_init() {
 	if File_scheduler_v1_scheduler_proto != nil {
 		return
 	}
+	file_scheduler_v1_scheduler_proto_msgTypes[0].OneofWrappers = []any{}
+	file_scheduler_v1_scheduler_proto_msgTypes[2].OneofWrappers = []any{}
+	file_scheduler_v1_scheduler_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_scheduler_v1_scheduler_proto_rawDesc), len(file_scheduler_v1_scheduler_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,

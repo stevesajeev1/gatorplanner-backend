@@ -13,6 +13,7 @@ __all__ = (
     "Schedule",
     "SchedulerServiceBase",
     "SelectedClass",
+    "SortBy",
 )
 
 from dataclasses import dataclass
@@ -75,6 +76,54 @@ class Day(betterproto2.Enum):
         }
 
 
+class SortBy(betterproto2.Enum):
+    UNSPECIFIED = 0
+
+    EARLIEST_START = 1
+
+    LATEST_START = 2
+
+    EARLIEST_END = 3
+
+    LATEST_END = 4
+
+    MOST_COMPACT = 5
+
+    FEWEST_DAYS = 6
+
+    MOST_BALANCED = 7
+
+    INSTRUCTOR_RATING = 8
+
+    @classmethod
+    def betterproto_value_to_renamed_proto_names(cls) -> dict[int, str]:
+        return {
+            0: "SORT_BY_UNSPECIFIED",
+            1: "SORT_BY_EARLIEST_START",
+            2: "SORT_BY_LATEST_START",
+            3: "SORT_BY_EARLIEST_END",
+            4: "SORT_BY_LATEST_END",
+            5: "SORT_BY_MOST_COMPACT",
+            6: "SORT_BY_FEWEST_DAYS",
+            7: "SORT_BY_MOST_BALANCED",
+            8: "SORT_BY_INSTRUCTOR_RATING",
+        }
+
+    @classmethod
+    def betterproto_renamed_proto_names_to_value(cls) -> dict[str, int]:
+        return {
+            "SORT_BY_UNSPECIFIED": 0,
+            "SORT_BY_EARLIEST_START": 1,
+            "SORT_BY_LATEST_START": 2,
+            "SORT_BY_EARLIEST_END": 3,
+            "SORT_BY_LATEST_END": 4,
+            "SORT_BY_MOST_COMPACT": 5,
+            "SORT_BY_FEWEST_DAYS": 6,
+            "SORT_BY_MOST_BALANCED": 7,
+            "SORT_BY_INSTRUCTOR_RATING": 8,
+        }
+
+
 @dataclass(eq=False, repr=False)
 class Class(betterproto2.Message):
     class_id: "str" = betterproto2.field(1, betterproto2.TYPE_STRING)
@@ -83,13 +132,17 @@ class Class(betterproto2.Message):
         2, betterproto2.TYPE_MESSAGE, repeated=True
     )
 
+    avg_instructor_rating: "float | None" = betterproto2.field(
+        3, betterproto2.TYPE_DOUBLE, optional=True
+    )
+
 
 default_message_pool.register_message("scheduler.v1", "Class", Class)
 
 
 @dataclass(eq=False, repr=False)
 class Course(betterproto2.Message):
-    course_id: "int" = betterproto2.field(1, betterproto2.TYPE_INT32)
+    course_id: "str" = betterproto2.field(1, betterproto2.TYPE_STRING)
 
     classes: "list[Class]" = betterproto2.field(
         2, betterproto2.TYPE_MESSAGE, repeated=True
@@ -103,6 +156,14 @@ default_message_pool.register_message("scheduler.v1", "Course", Course)
 class GenerateSchedulesRequest(betterproto2.Message):
     courses: "list[Course]" = betterproto2.field(
         1, betterproto2.TYPE_MESSAGE, repeated=True
+    )
+
+    day_restrictions: "list[Day]" = betterproto2.field(
+        2, betterproto2.TYPE_ENUM, repeated=True
+    )
+
+    sort_by: "SortBy | None" = betterproto2.field(
+        3, betterproto2.TYPE_ENUM, optional=True
     )
 
 
@@ -131,6 +192,14 @@ class Meeting(betterproto2.Message):
 
     end_minute: "int" = betterproto2.field(3, betterproto2.TYPE_INT32)
 
+    building_longitude: "float | None" = betterproto2.field(
+        4, betterproto2.TYPE_DOUBLE, optional=True
+    )
+
+    building_latitude: "float | None" = betterproto2.field(
+        5, betterproto2.TYPE_DOUBLE, optional=True
+    )
+
 
 default_message_pool.register_message("scheduler.v1", "Meeting", Meeting)
 
@@ -147,7 +216,7 @@ default_message_pool.register_message("scheduler.v1", "Schedule", Schedule)
 
 @dataclass(eq=False, repr=False)
 class SelectedClass(betterproto2.Message):
-    course_id: "int" = betterproto2.field(1, betterproto2.TYPE_INT32)
+    course_id: "str" = betterproto2.field(1, betterproto2.TYPE_STRING)
 
     class_id: "str" = betterproto2.field(2, betterproto2.TYPE_STRING)
 

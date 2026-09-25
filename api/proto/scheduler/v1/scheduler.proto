@@ -8,22 +8,27 @@ service SchedulerService {
 
 message GenerateSchedulesRequest {
   repeated Course courses = 1;
+  repeated Day day_restrictions = 2;
+  optional SortBy sort_by = 3;
 }
 
 message Course {
-  int32 course_id = 1;
+  string course_id = 1;
   repeated Class classes = 2;
 }
 
 message Class {
   string class_id = 1;
   repeated Meeting meetings = 2;
+  optional double avg_instructor_rating = 3;
 }
 
 message Meeting {
   repeated Day days = 1;
   int32 start_minute = 2;
   int32 end_minute = 3;
+  optional double building_longitude = 4;
+  optional double building_latitude = 5;
 }
 
 enum Day {
@@ -37,6 +42,18 @@ enum Day {
   DAY_SUNDAY = 7;
 }
 
+enum SortBy {
+  SORT_BY_UNSPECIFIED = 0;
+  SORT_BY_EARLIEST_START = 1;
+  SORT_BY_LATEST_START = 2;
+  SORT_BY_EARLIEST_END = 3;
+  SORT_BY_LATEST_END = 4;
+  SORT_BY_MOST_COMPACT = 5;
+  SORT_BY_FEWEST_DAYS = 6;
+  SORT_BY_MOST_BALANCED = 7;
+  SORT_BY_INSTRUCTOR_RATING = 8;
+}
+
 message GenerateSchedulesResponse {
   repeated Schedule schedules = 1;
 }
@@ -46,6 +63,6 @@ message Schedule {
 }
 
 message SelectedClass {
-  int32 course_id = 1;
+  string course_id = 1;
   string class_id = 2;
 }
