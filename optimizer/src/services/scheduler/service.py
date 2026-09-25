@@ -11,7 +11,6 @@ from .model import build_model
 from .objectives import add_objective
 from .schedule import extract_schedule
 
-
 MAX_SOLVE_TIME_SECONDS = 60
 
 
@@ -42,9 +41,7 @@ class SchedulerService(SchedulerServiceBase):
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = MAX_SOLVE_TIME_SECONDS
 
-        class Callback(
-            cp_model.CpSolverSolutionCallback
-        ):
+        class Callback(cp_model.CpSolverSolutionCallback):
             def __init__(self):
                 super().__init__()
                 self.schedules: list[Schedule] = []
@@ -80,21 +77,13 @@ class SchedulerService(SchedulerServiceBase):
         while remaining_time > 0:
             model, variables = build_model(message)
 
-            objective, minimize = add_objective(
-                message,
-                model,
-                variables
-            )
+            objective, minimize = add_objective(message, model, variables)
 
             if previous_value is not None:
                 if minimize:
-                    model.add(
-                        objective > previous_value
-                    )
+                    model.add(objective > previous_value)
                 else:
-                    model.add(
-                        objective < previous_value
-                    )
+                    model.add(objective < previous_value)
 
             if minimize:
                 model.minimize(objective)
@@ -122,18 +111,15 @@ class SchedulerService(SchedulerServiceBase):
                 variables,
             )
 
-            model.add(
-                objective == current_value
-            )
+            model.add(objective == current_value)
 
             solver = cp_model.CpSolver()
             solver.parameters.max_time_in_seconds = remaining_time
 
-            class Callback(
-                cp_model.CpSolverSolutionCallback
-            ):
-                def __init__(self):
+            class Callback(cp_model.CpSolverSolutionCallback):
+                def __init__(self, variables: dict[tuple[str, str], cp_model.IntVar]):
                     super().__init__()
+                    self.variables = variables
                     self.schedules: list[Schedule] = []
 
                 def on_solution_callback(self):
@@ -141,11 +127,11 @@ class SchedulerService(SchedulerServiceBase):
                         extract_schedule(
                             self,
                             message,
-                            variables,
+                            self.variables,
                         )
                     )
 
-            callback = Callback()
+            callback = Callback(variables)
 
             solver.parameters.enumerate_all_solutions = True
 

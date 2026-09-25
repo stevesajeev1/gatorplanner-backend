@@ -1,11 +1,13 @@
 import asyncio
 import os
 
-from services.scheduler import SchedulerService
+from dotenv import load_dotenv
 from grpclib.server import Server
 
-from dotenv import load_dotenv
+from services.scheduler import SchedulerService
+
 load_dotenv()
+
 
 async def server(host: str, port: int):
     server = Server([SchedulerService()])

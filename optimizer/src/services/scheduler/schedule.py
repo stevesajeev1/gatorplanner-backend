@@ -10,15 +10,13 @@ from generated.scheduler.v1 import (
 def extract_schedule(
     solver: cp_model.CpSolverSolutionCallback,
     message: GenerateSchedulesRequest,
-    variables,
+    variables: dict[tuple[str, str], cp_model.IntVar],
 ) -> Schedule:
     selected_classes = []
 
     for course in message.courses:
         for cls in course.classes:
-            variable = variables[
-                (course.course_id, cls.class_id)
-            ]
+            variable = variables[(course.course_id, cls.class_id)]
 
             if solver.value(variable):
                 selected_classes.append(

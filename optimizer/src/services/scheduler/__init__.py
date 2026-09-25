@@ -1,1 +1,1 @@
-from .service import SchedulerService
+from .service import SchedulerService as SchedulerService

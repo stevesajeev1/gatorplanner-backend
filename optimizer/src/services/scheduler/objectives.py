@@ -1,12 +1,12 @@
-from typing import Callable
+from collections.abc import Callable
 
 from ortools.sat.python import cp_model
 
 from generated.scheduler.v1 import (
+    Class,
     Day,
     GenerateSchedulesRequest,
     SortBy,
-    Class,
 )
 
 MINUTES_PER_DAY = 24 * 60
@@ -14,31 +14,19 @@ MAX_MINUTE = MINUTES_PER_DAY
 
 
 def class_earliest_start(cls: Class) -> int:
-    return min(
-        meeting.start_minute
-        for meeting in cls.meetings
-    )
+    return min(meeting.start_minute for meeting in cls.meetings)
 
 
 def class_latest_start(cls: Class) -> int:
-    return max(
-        meeting.start_minute
-        for meeting in cls.meetings
-    )
+    return max(meeting.start_minute for meeting in cls.meetings)
 
 
 def class_earliest_end(cls: Class) -> int:
-    return min(
-        meeting.end_minute
-        for meeting in cls.meetings
-    )
+    return min(meeting.end_minute for meeting in cls.meetings)
 
 
 def class_latest_end(cls: Class) -> int:
-    return max(
-        meeting.end_minute
-        for meeting in cls.meetings
-    )
+    return max(meeting.end_minute for meeting in cls.meetings)
 
 
 def add_selected_value(
@@ -54,13 +42,9 @@ def add_selected_value(
         name,
     )
 
-    model.add(
-        result == value
-    ).only_enforce_if(selected)
+    model.add(result == value).only_enforce_if(selected)
 
-    model.add(
-        result == default
-    ).only_enforce_if(selected.Not())
+    model.add(result == default).only_enforce_if(selected.Not())
 
     return result
 
@@ -76,9 +60,7 @@ def add_min_class_value_objective(
 
     for course in message.courses:
         for cls in course.classes:
-            selected = variables[
-                (course.course_id, cls.class_id)
-            ]
+            selected = variables[(course.course_id, cls.class_id)]
 
             if not cls.meetings:
                 value = MAX_MINUTE
@@ -120,9 +102,7 @@ def add_max_class_value_objective(
 
     for course in message.courses:
         for cls in course.classes:
-            selected = variables[
-                (course.course_id, cls.class_id)
-            ]
+            selected = variables[(course.course_id, cls.class_id)]
 
             if not cls.meetings:
                 value = 0
@@ -232,9 +212,7 @@ def add_most_compact_objective(
         "schedule_compactness",
     )
 
-    model.add(
-        compact == latest_end - earliest_start
-    )
+    model.add(compact == latest_end - earliest_start)
 
     return compact
 
@@ -244,20 +222,15 @@ def add_fewest_days_objective(
     model: cp_model.CpModel,
     variables: dict[tuple[str, str], cp_model.IntVar],
 ) -> cp_model.IntVar:
-    day_used = {
-        day: model.new_bool_var(f"day_used_{day.name}")
-        for day in Day
-    }
+    day_used = {day: model.new_bool_var(f"day_used_{day.name}") for day in Day}
 
     for course in message.courses:
         for cls in course.classes:
-            selected = variables[
-                (course.course_id, cls.class_id)
-            ]
+            selected = variables[(course.course_id, cls.class_id)]
 
-            for day in day_used:
+            for day, value in day_used.items():
                 if any(day in meeting.days for meeting in cls.meetings):
-                    model.add(day_used[day] >= selected)
+                    model.add(value >= selected)
 
     objective = model.new_int_var(
         0,
@@ -265,9 +238,7 @@ def add_fewest_days_objective(
         "schedule_day_count",
     )
 
-    model.add(
-        objective == sum(day_used.values())
-    )
+    model.add(objective == sum(day_used.values()))
 
     return objective
 
@@ -287,14 +258,9 @@ def add_most_balanced_objective(
 
         for course in message.courses:
             for cls in course.classes:
-                selected = variables[
-                    (course.course_id, cls.class_id)
-                ]
+                selected = variables[(course.course_id, cls.class_id)]
 
-                if any(
-                    day in meeting.days
-                    for meeting in cls.meetings
-                ):
+                if any(day in meeting.days for meeting in cls.meetings):
                     class_indicators.append(selected)
 
         model.add(
@@ -326,9 +292,7 @@ def add_instructor_rating_objective(
 
     for course in message.courses:
         for cls in course.classes:
-            selected = variables[
-                (course.course_id, cls.class_id)
-            ]
+            selected = variables[(course.course_id, cls.class_id)]
 
             # assume a rating of 3.0 for classes without a rating
             if cls.avg_instructor_rating is None:
@@ -352,7 +316,7 @@ def add_instructor_rating_objective(
 def add_objective(
     message: GenerateSchedulesRequest,
     model: cp_model.CpModel,
-    variables: dict[tuple[str, str], cp_model.IntVar]
+    variables: dict[tuple[str, str], cp_model.IntVar],
 ) -> tuple[cp_model.IntVar, bool]:
     sort_by = message.sort_by
 

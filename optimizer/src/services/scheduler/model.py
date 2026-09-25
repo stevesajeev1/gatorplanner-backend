@@ -15,10 +15,7 @@ def meetings_overlap(a: Meeting, b: Meeting) -> bool:
     if not common_days:
         return False
 
-    return (
-        a.start_minute < b.end_minute
-        and b.start_minute < a.end_minute
-    )
+    return a.start_minute < b.end_minute and b.start_minute < a.end_minute
 
 
 def class_allowed_on_days(
@@ -44,17 +41,14 @@ def build_model(
 
     for course in message.courses:
         for cls in course.classes:
-            variables[(course.course_id, cls.class_id)] = (
-                model.new_bool_var(
-                    f"course_{course.course_id}_class_{cls.class_id}"
-                )
+            variables[(course.course_id, cls.class_id)] = model.new_bool_var(
+                f"course_{course.course_id}_class_{cls.class_id}"
             )
 
     # one class selected for each course
     for course in message.courses:
         class_variables = [
-            variables[(course.course_id, cls.class_id)]
-            for cls in course.classes
+            variables[(course.course_id, cls.class_id)] for cls in course.classes
         ]
 
         model.add_exactly_one(class_variables)
@@ -68,9 +62,7 @@ def build_model(
                     cls,
                     restricted_days,
                 ):
-                    model.add(
-                        variables[(course.course_id, cls.class_id)] == 0
-                    )
+                    model.add(variables[(course.course_id, cls.class_id)] == 0)
 
     # prevent conflicting classes from being selected together
     for course_a, course_b in combinations(message.courses, 2):
@@ -83,7 +75,7 @@ def build_model(
                 ):
                     model.add_at_most_one(
                         variables[(course_a.course_id, class_a.class_id)],
-                        variables[(course_b.course_id, class_b.class_id)]
+                        variables[(course_b.course_id, class_b.class_id)],
                     )
 
     return model, variables
