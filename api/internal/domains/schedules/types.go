@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	schedulerv1 "github.com/stevesajeev1/gatorplanner-backend/generated/scheduler/v1"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/database/sqlc"
+	"github.com/stevesajeev1/gatorplanner-backend/internal/domains/shared"
 )
 
 type SortBy string
@@ -53,5 +54,5 @@ type Schedule struct {
 }
 
 type GenerateSchedulesResponse struct {
-	Body []Schedule `nullable:"false"`
+	Body shared.PaginatedResponse[Schedule] `nullable:"false"`
 }

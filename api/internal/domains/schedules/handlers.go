@@ -33,7 +33,9 @@ func (h *handler) generateSchedules(
 	if err != nil {
 		return nil, h.schedulesHTTPError(err, "Failed to generate schedules")
 	}
-	return &GenerateSchedulesResponse{Body: schedules}, nil
+	return &GenerateSchedulesResponse{
+		Body: shared.Paginate(schedules, uint(len(schedules)), input.Limit, input.Offset),
+	}, nil
 }
 
 func (h *handler) schedulesHTTPError(err error, fallback string) error {
