@@ -1,3 +1,5 @@
+import hashlib
+
 from ortools.sat.python import cp_model
 from redis.asyncio import Redis
 
@@ -14,37 +16,55 @@ from .objectives import add_objective
 from .schedule import extract_schedule
 
 MAX_SOLVE_TIME_SECONDS = 60
+SCHEDULES_CACHE_PREFIX = "schedules:v1"
 
 
 class SchedulerService(SchedulerServiceBase):
     def __init__(self, redis: Redis):
         self.schedule_cache = ProtoCache(
             redis,
-            "schedules:v1",
+            SCHEDULES_CACHE_PREFIX,
             GenerateSchedulesResponse,
+            custom_key=self.schedule_cache_key,
         )
+
+    def schedule_cache_key(self, request: GenerateSchedulesRequest) -> str:
+        key_request = GenerateSchedulesRequest(
+            courses=request.courses,
+            day_restrictions=request.day_restrictions,
+            sort_by=request.sort_by,
+        )
+
+        data = key_request.SerializeToString()
+        digest = hashlib.sha256(data).hexdigest()
+
+        return f"{SCHEDULES_CACHE_PREFIX}:{digest}"
 
     async def generate_schedules(
         self,
         message: GenerateSchedulesRequest,
     ) -> GenerateSchedulesResponse:
-        response = await self.schedule_cache.get(message)
-        if response is not None:
-            return response
+        cached = await self.schedule_cache.get(message)
+        if cached is None:
+            if message.sort_by is None:
+                schedules = self.generate_feasible_schedules(
+                    message,
+                )
+            else:
+                schedules = self.generate_optimized_schedules(
+                    message,
+                )
 
-        if message.sort_by is None:
-            schedules = self.generate_feasible_schedules(
-                message,
+            cached = GenerateSchedulesResponse(
+                schedules=schedules,
             )
-        else:
-            schedules = self.generate_optimized_schedules(
-                message,
-            )
+            await self.schedule_cache.set(message, cached)
 
+        start = message.offset
+        end = start + message.limit
         response = GenerateSchedulesResponse(
-            schedules=schedules,
+            schedules=cached.schedules[start:end], total=len(cached.schedules)
         )
-        await self.schedule_cache.set(message, response)
         return response
 
     def generate_feasible_schedules(

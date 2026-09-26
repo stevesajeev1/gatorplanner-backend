@@ -10,6 +10,8 @@ message GenerateSchedulesRequest {
   repeated Course courses = 1;
   repeated Day day_restrictions = 2;
   optional SortBy sort_by = 3;
+  uint32 offset = 4;
+  uint32 limit = 5;
 }
 
 message Course {
@@ -56,6 +58,7 @@ enum SortBy {
 
 message GenerateSchedulesResponse {
   repeated Schedule schedules = 1;
+  uint32 total = 2;
 }
 
 message Schedule {

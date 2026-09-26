@@ -157,6 +157,8 @@ type GenerateSchedulesRequest struct {
 	Courses         []*Course              `protobuf:"bytes,1,rep,name=courses,proto3" json:"courses,omitempty"`
 	DayRestrictions []Day                  `protobuf:"varint,2,rep,packed,name=day_restrictions,json=dayRestrictions,proto3,enum=scheduler.v1.Day" json:"day_restrictions,omitempty"`
 	SortBy          *SortBy                `protobuf:"varint,3,opt,name=sort_by,json=sortBy,proto3,enum=scheduler.v1.SortBy,oneof" json:"sort_by,omitempty"`
+	Offset          uint32                 `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
+	Limit           uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -210,6 +212,20 @@ func (x *GenerateSchedulesRequest) GetSortBy() SortBy {
 		return *x.SortBy
 	}
 	return SortBy_SORT_BY_UNSPECIFIED
+}
+
+func (x *GenerateSchedulesRequest) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *GenerateSchedulesRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
 }
 
 type Course struct {
@@ -403,6 +419,7 @@ func (x *Meeting) GetBuildingLatitude() float64 {
 type GenerateSchedulesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Schedules     []*Schedule            `protobuf:"bytes,1,rep,name=schedules,proto3" json:"schedules,omitempty"`
+	Total         uint32                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -442,6 +459,13 @@ func (x *GenerateSchedulesResponse) GetSchedules() []*Schedule {
 		return x.Schedules
 	}
 	return nil
+}
+
+func (x *GenerateSchedulesResponse) GetTotal() uint32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
 }
 
 type Schedule struct {
@@ -544,11 +568,13 @@ var File_scheduler_v1_scheduler_proto protoreflect.FileDescriptor
 
 const file_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\n" +
-	"\x1cscheduler/v1/scheduler.proto\x12\fscheduler.v1\"\xc8\x01\n" +
+	"\x1cscheduler/v1/scheduler.proto\x12\fscheduler.v1\"\xf6\x01\n" +
 	"\x18GenerateSchedulesRequest\x12.\n" +
 	"\acourses\x18\x01 \x03(\v2\x14.scheduler.v1.CourseR\acourses\x12<\n" +
 	"\x10day_restrictions\x18\x02 \x03(\x0e2\x11.scheduler.v1.DayR\x0fdayRestrictions\x122\n" +
-	"\asort_by\x18\x03 \x01(\x0e2\x14.scheduler.v1.SortByH\x00R\x06sortBy\x88\x01\x01B\n" +
+	"\asort_by\x18\x03 \x01(\x0e2\x14.scheduler.v1.SortByH\x00R\x06sortBy\x88\x01\x01\x12\x16\n" +
+	"\x06offset\x18\x04 \x01(\rR\x06offset\x12\x14\n" +
+	"\x05limit\x18\x05 \x01(\rR\x05limitB\n" +
 	"\n" +
 	"\b_sort_by\"T\n" +
 	"\x06Course\x12\x1b\n" +
@@ -567,9 +593,10 @@ const file_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\x12building_longitude\x18\x04 \x01(\x01H\x00R\x11buildingLongitude\x88\x01\x01\x120\n" +
 	"\x11building_latitude\x18\x05 \x01(\x01H\x01R\x10buildingLatitude\x88\x01\x01B\x15\n" +
 	"\x13_building_longitudeB\x14\n" +
-	"\x12_building_latitude\"Q\n" +
+	"\x12_building_latitude\"g\n" +
 	"\x19GenerateSchedulesResponse\x124\n" +
-	"\tschedules\x18\x01 \x03(\v2\x16.scheduler.v1.ScheduleR\tschedules\"A\n" +
+	"\tschedules\x18\x01 \x03(\v2\x16.scheduler.v1.ScheduleR\tschedules\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\rR\x05total\"A\n" +
 	"\bSchedule\x125\n" +
 	"\aclasses\x18\x01 \x03(\v2\x1b.scheduler.v1.SelectedClassR\aclasses\"G\n" +
 	"\rSelectedClass\x12\x1b\n" +

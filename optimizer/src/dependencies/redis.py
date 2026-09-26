@@ -1,5 +1,6 @@
 import hashlib
 import os
+from collections.abc import Callable
 from typing import cast
 
 import betterproto2
@@ -23,12 +24,17 @@ class ProtoCache[TRequest: betterproto2.Message, TResponse: betterproto2.Message
         redis: Redis,
         prefix: str,
         response_type: type[TResponse],
+        custom_key: Callable[[TRequest], str] | None = None,
     ):
         self.redis = redis
         self.prefix = prefix
         self.response_type = response_type
+        self.custom_key = custom_key
 
     def _get_cache_key(self, request: TRequest) -> str:
+        if self.custom_key:
+            return self.custom_key(request)
+
         data = request.SerializeToString()
         digest = hashlib.sha256(data).hexdigest()
 
