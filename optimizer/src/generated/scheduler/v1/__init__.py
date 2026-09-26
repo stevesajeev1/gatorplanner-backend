@@ -166,6 +166,10 @@ class GenerateSchedulesRequest(betterproto2.Message):
         3, betterproto2.TYPE_ENUM, optional=True
     )
 
+    offset: "int" = betterproto2.field(4, betterproto2.TYPE_UINT32)
+
+    limit: "int" = betterproto2.field(5, betterproto2.TYPE_UINT32)
+
 
 default_message_pool.register_message(
     "scheduler.v1", "GenerateSchedulesRequest", GenerateSchedulesRequest
@@ -177,6 +181,8 @@ class GenerateSchedulesResponse(betterproto2.Message):
     schedules: "list[Schedule]" = betterproto2.field(
         1, betterproto2.TYPE_MESSAGE, repeated=True
     )
+
+    total: "int" = betterproto2.field(2, betterproto2.TYPE_UINT32)
 
 
 default_message_pool.register_message(
