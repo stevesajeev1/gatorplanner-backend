@@ -126,7 +126,14 @@ func buildSchedulerRequest(
 	}, nil
 }
 
-func (r *SchedulesOptimizerRepository) GenerateSchedules(ctx context.Context, classes []sqlc.TypedListClassesForSchedulerRow, sortBy *schedulerv1.SortBy, dayRestrictions []sqlc.MeetDayType) (*schedulerv1.GenerateSchedulesResponse, error) {
+func (r *SchedulesOptimizerRepository) GenerateSchedules(
+	ctx context.Context,
+	classes []sqlc.TypedListClassesForSchedulerRow,
+	sortBy *schedulerv1.SortBy,
+	dayRestrictions []sqlc.MeetDayType,
+	limit uint,
+	offset uint,
+) (*schedulerv1.GenerateSchedulesResponse, error) {
 	request, err := buildSchedulerRequest(classes)
 	if err != nil {
 		return nil, err
@@ -139,6 +146,9 @@ func (r *SchedulesOptimizerRepository) GenerateSchedules(ctx context.Context, cl
 	if len(dayRestrictions) > 0 {
 		request.DayRestrictions = convertDays(dayRestrictions)
 	}
+
+	request.Limit = uint32(limit)
+	request.Offset = uint32(offset)
 
 	return r.client.GenerateSchedules(ctx, request)
 }

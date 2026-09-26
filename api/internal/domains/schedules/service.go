@@ -96,34 +96,27 @@ func (s *SchedulesService) Generate(
 		}
 	}
 
-	generated, err := s.schedulesOptimizerRepo.GenerateSchedules(ctx, classes, sortBy, request.DayRestrictions)
+	generated, err := s.schedulesOptimizerRepo.GenerateSchedules(ctx, classes, sortBy, request.DayRestrictions, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	totalSchedules := uint(len(generated.Schedules))
-
-	start := min(offset, totalSchedules)
-	end := min(start+limit, totalSchedules)
-
-	schedules := make([]Schedule, 0, end-start)
-	for _, schedule := range generated.Schedules[start:end] {
+	schedules := make([]Schedule, len(generated.Schedules))
+	for i, schedule := range generated.Schedules {
 		classes := make([]SelectedClass, len(schedule.Classes))
-
-		for i, class := range schedule.Classes {
-			classes[i] = SelectedClass{
+		for j, class := range schedule.Classes {
+			classes[j] = SelectedClass{
 				CourseID: uuid.MustParse(class.CourseId),
 				ClassID:  uuid.MustParse(class.ClassId),
 			}
 		}
-
-		schedules = append(schedules, Schedule{
+		schedules[i] = Schedule{
 			Classes: classes,
-		})
+		}
 	}
 
 	return &GenerateSchedulesOutput{
-		Total:     totalSchedules,
+		Total:     uint(generated.Total),
 		Schedules: schedules,
 	}, nil
 }
