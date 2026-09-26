@@ -44,7 +44,7 @@ func (s *SchedulesService) Generate(
 	request *GenerateSchedulesRequest,
 	limit uint,
 	offset uint,
-) ([]Schedule, error) {
+) (*GenerateSchedulesOutput, error) {
 	classIDs := []uuid.UUID{}
 	for _, choice := range request.ClassChoices {
 		classIDs = append(classIDs, choice.ClassIDs...)
@@ -96,26 +96,34 @@ func (s *SchedulesService) Generate(
 		}
 	}
 
-	// TODO: Cache in Redis
 	generated, err := s.schedulesOptimizerRepo.GenerateSchedules(ctx, classes, sortBy, request.DayRestrictions)
 	if err != nil {
 		return nil, err
 	}
 
-	schedules := make([]Schedule, len(generated.Schedules))
-	for i, schedule := range generated.Schedules {
+	totalSchedules := uint(len(generated.Schedules))
+
+	start := min(offset, totalSchedules)
+	end := min(start+limit, totalSchedules)
+
+	schedules := make([]Schedule, 0, end-start)
+	for _, schedule := range generated.Schedules[start:end] {
 		classes := make([]SelectedClass, len(schedule.Classes))
-		for j, class := range schedule.Classes {
-			classes[j] = SelectedClass{
+
+		for i, class := range schedule.Classes {
+			classes[i] = SelectedClass{
 				CourseID: uuid.MustParse(class.CourseId),
 				ClassID:  uuid.MustParse(class.ClassId),
 			}
 		}
-		schedules[i] = Schedule{
+
+		schedules = append(schedules, Schedule{
 			Classes: classes,
-		}
+		})
 	}
 
-	// TODO: Implement pagination
-	return schedules, nil
+	return &GenerateSchedulesOutput{
+		Total:     totalSchedules,
+		Schedules: schedules,
+	}, nil
 }
