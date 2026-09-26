@@ -1,6 +1,7 @@
 import hashlib
 import os
-from typing import Callable, cast
+from collections.abc import Callable
+from typing import cast
 
 import betterproto2
 from dotenv import load_dotenv
@@ -23,7 +24,7 @@ class ProtoCache[TRequest: betterproto2.Message, TResponse: betterproto2.Message
         redis: Redis,
         prefix: str,
         response_type: type[TResponse],
-        custom_key: Callable[[TRequest], str] | None = None
+        custom_key: Callable[[TRequest], str] | None = None,
     ):
         self.redis = redis
         self.prefix = prefix

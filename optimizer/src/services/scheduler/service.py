@@ -25,7 +25,7 @@ class SchedulerService(SchedulerServiceBase):
             redis,
             SCHEDULES_CACHE_PREFIX,
             GenerateSchedulesResponse,
-            custom_key=self.schedule_cache_key
+            custom_key=self.schedule_cache_key,
         )
 
     def schedule_cache_key(self, request: GenerateSchedulesRequest) -> str:
@@ -63,8 +63,7 @@ class SchedulerService(SchedulerServiceBase):
         start = message.offset
         end = start + message.limit
         response = GenerateSchedulesResponse(
-            schedules=cached.schedules[start:end],
-            total=len(cached.schedules)
+            schedules=cached.schedules[start:end], total=len(cached.schedules)
         )
         return response
 
