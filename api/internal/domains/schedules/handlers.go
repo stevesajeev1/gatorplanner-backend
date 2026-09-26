@@ -29,12 +29,12 @@ func (h *handler) generateSchedules(
 		shared.PaginationParams
 	},
 ) (*GenerateSchedulesResponse, error) {
-	schedules, err := h.schedulesService.Generate(ctx, input.TermID, &input.Body, input.Limit, input.Offset)
+	generated, err := h.schedulesService.Generate(ctx, input.TermID, &input.Body, input.Limit, input.Offset)
 	if err != nil {
 		return nil, h.schedulesHTTPError(err, "Failed to generate schedules")
 	}
 	return &GenerateSchedulesResponse{
-		Body: shared.Paginate(schedules, uint(len(schedules)), input.Limit, input.Offset),
+		Body: shared.Paginate(generated.Schedules, generated.Total, input.Limit, input.Offset),
 	}, nil
 }
 

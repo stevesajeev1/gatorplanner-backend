@@ -3,6 +3,7 @@ services:
     build:
       dockerfile: Dockerfile.dev
       context: ./api
+    restart: unless-stopped
     volumes:
       - ./api:/app
     ports:
@@ -15,6 +16,7 @@ services:
   postgres:
     image: postgres:18.4
     container_name: postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -28,6 +30,7 @@ services:
   elasticsearch:
     image: elasticsearch:9.5.2
     container_name: elasticsearch
+    restart: unless-stopped
     environment:
       discovery.type: single-node
       xpack.security.enabled: false
@@ -38,12 +41,31 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  redis:
+    image: redis:8.10.2-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   optimizer:
     build:
       dockerfile: Dockerfile.dev
       context: ./optimizer
+    restart: unless-stopped
     ports:
       - 50051:50051
+    depends_on:
+      - redis
     develop:
       watch:
         - action: sync+restart
@@ -55,3 +77,4 @@ services:
 volumes:
   postgres_data:
   elasticsearch_data:
+  redis_data:

@@ -1,5 +1,7 @@
 from ortools.sat.python import cp_model
+from redis.asyncio import Redis
 
+from dependencies.redis import ProtoCache
 from generated.scheduler.v1 import (
     GenerateSchedulesRequest,
     GenerateSchedulesResponse,
@@ -15,10 +17,21 @@ MAX_SOLVE_TIME_SECONDS = 60
 
 
 class SchedulerService(SchedulerServiceBase):
+    def __init__(self, redis: Redis):
+        self.schedule_cache = ProtoCache(
+            redis,
+            "schedules:v1",
+            GenerateSchedulesResponse,
+        )
+
     async def generate_schedules(
         self,
         message: GenerateSchedulesRequest,
     ) -> GenerateSchedulesResponse:
+        response = await self.schedule_cache.get(message)
+        if response is not None:
+            return response
+
         if message.sort_by is None:
             schedules = self.generate_feasible_schedules(
                 message,
@@ -28,9 +41,11 @@ class SchedulerService(SchedulerServiceBase):
                 message,
             )
 
-        return GenerateSchedulesResponse(
+        response = GenerateSchedulesResponse(
             schedules=schedules,
         )
+        await self.schedule_cache.set(message, response)
+        return response
 
     def generate_feasible_schedules(
         self,

@@ -53,6 +53,11 @@ type Schedule struct {
 	Classes []SelectedClass `json:"classes" nullable:"false"`
 }
 
+type GenerateSchedulesOutput struct {
+	Total     uint
+	Schedules []Schedule
+}
+
 type GenerateSchedulesResponse struct {
 	Body shared.PaginatedResponse[Schedule] `nullable:"false"`
 }
