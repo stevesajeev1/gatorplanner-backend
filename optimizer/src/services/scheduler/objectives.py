@@ -296,7 +296,7 @@ def add_instructor_rating_objective(
 
             # assume a rating of 3.0 for classes without a rating
             if cls.avg_instructor_rating is None:
-                rating = 3.0 * 100
+                rating = round(3.0 * 100)
             else:
                 rating = round(cls.avg_instructor_rating * 100)
 
