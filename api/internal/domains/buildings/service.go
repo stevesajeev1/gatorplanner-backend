@@ -25,13 +25,13 @@ func NewService(
 
 func (s *BuildingsService) List(
 	ctx context.Context,
-) ([]sqlc.TypedListBuildingsRow, error) {
+) ([]sqlc.TypedBuilding, error) {
 	rawBuildings, err := s.buildingsDBRepo.ListBuildings(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	buildings, err := sqlc.RawListBuildingsRows(rawBuildings).Typed()
+	buildings, err := sqlc.RawBuildings(rawBuildings).Typed()
 	if err != nil {
 		return nil, err
 	}

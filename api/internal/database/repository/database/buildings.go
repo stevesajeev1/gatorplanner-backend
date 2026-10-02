@@ -17,6 +17,6 @@ func NewBuildingsRepository(db *dependencies.DB) *BuildingsRepository {
 
 func (r *BuildingsRepository) ListBuildings(
 	ctx context.Context,
-) ([]sqlc.ListBuildingsRow, error) {
+) ([]sqlc.Building, error) {
 	return r.db.Query.ListBuildings(ctx)
 }
