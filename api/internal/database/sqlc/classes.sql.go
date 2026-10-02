@@ -32,6 +32,7 @@ SELECT
                     CASE
                         WHEN b.id IS NULL THEN NULL
                         ELSE jsonb_build_object(
+                            'id', b.id,
                             'name', b.name,
                             'code', b.code,
                             'room', NULLIF(cmt.room, '')

@@ -1,5 +1,6 @@
 -- name: ListBuildings :many
 SELECT
+    id,
     name,
     code,
     latitude,

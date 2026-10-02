@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
 	"github.com/stevesajeev1/gatorplanner-backend/internal/util"
 )
 
@@ -90,10 +91,11 @@ func (t timeOfDay) MarshalJSON() ([]byte, error) {
 }
 
 type CustomBuilding struct {
-	_    struct{} `nullable:"true"`
-	Name string   `json:"name"`
-	Code string   `json:"code"`
-	Room *string  `json:"room"`
+	_    struct{}  `nullable:"true"`
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	Code string    `json:"code"`
+	Room *string   `json:"room"`
 }
 
 type CustomMeetTime struct {
@@ -153,16 +155,16 @@ func (r RawListClassesByIDRows) Typed() ([]TypedListClassesByIDRow, error) {
 	return typedClasses, nil
 }
 
-type RawListBuildingsRows []ListBuildingsRow
+type RawBuildings []Building
 
-type TypedListBuildingsRow struct {
-	ListBuildingsRow
+type TypedBuilding struct {
+	Building
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
 }
 
-func (r RawListBuildingsRows) Typed() ([]TypedListBuildingsRow, error) {
-	typedBuildings := make([]TypedListBuildingsRow, len(r))
+func (r RawBuildings) Typed() ([]TypedBuilding, error) {
+	typedBuildings := make([]TypedBuilding, len(r))
 	for i, rawBuilding := range r {
 		var latitude *float64 = nil
 		if rawBuilding.Latitude.Valid {
@@ -181,10 +183,10 @@ func (r RawListBuildingsRows) Typed() ([]TypedListBuildingsRow, error) {
 			longitude = &value.Float64
 		}
 
-		typedBuildings[i] = TypedListBuildingsRow{
-			ListBuildingsRow: rawBuilding,
-			Latitude:         latitude,
-			Longitude:        longitude,
+		typedBuildings[i] = TypedBuilding{
+			Building:  rawBuilding,
+			Latitude:  latitude,
+			Longitude: longitude,
 		}
 	}
 	return typedBuildings, nil

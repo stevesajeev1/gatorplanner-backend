@@ -7,12 +7,11 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listBuildings = `-- name: ListBuildings :many
 SELECT
+    id,
     name,
     code,
     latitude,
@@ -21,23 +20,17 @@ FROM buildings
 ORDER BY name ASC
 `
 
-type ListBuildingsRow struct {
-	Name      string         `json:"name"`
-	Code      string         `json:"code"`
-	Latitude  pgtype.Numeric `json:"latitude"`
-	Longitude pgtype.Numeric `json:"longitude"`
-}
-
-func (q *Queries) ListBuildings(ctx context.Context) ([]ListBuildingsRow, error) {
+func (q *Queries) ListBuildings(ctx context.Context) ([]Building, error) {
 	rows, err := q.db.Query(ctx, listBuildings)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListBuildingsRow{}
+	items := []Building{}
 	for rows.Next() {
-		var i ListBuildingsRow
+		var i Building
 		if err := rows.Scan(
+			&i.ID,
 			&i.Name,
 			&i.Code,
 			&i.Latitude,
