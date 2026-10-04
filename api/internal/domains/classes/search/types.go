@@ -194,6 +194,8 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 			if !slices.Contains(sqlc.ValidMeetDays, sqlc.MeetDayType(*r.TextValue)) {
 				return fmt.Errorf("invalid meet day: %q", *r.TextValue)
 			}
+		default:
+			panic("unreachable")
 		}
 	case FieldTypeNumber:
 		if !slices.Contains(ValidGeneralNumberFields, r.Field) && !slices.Contains(ValidCheckedNumberFields, r.Field) {
