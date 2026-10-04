@@ -7,9 +7,6 @@ on:
     paths:
       - "optimizer/**"
       - "deploy/optimizer/**"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
