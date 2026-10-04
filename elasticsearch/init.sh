@@ -1,8 +1,13 @@
 #!/bin/sh
 set -e
 
-ES_URL="http://localhost:9200"
 INDEX_DIR="./indexes"
+
+echo "Waiting for Elasticsearch..."
+
+until curl -sSf "${ELASTICSEARCH_URL}/_cluster/health" > /dev/null; do
+    sleep 2
+done
 
 # Update indexes
 echo "Creating indexes"
@@ -14,10 +19,10 @@ for CONFIG in "$INDEX_DIR"/*.json; do
 
     # Delete existing index. 404 is fine if it doesn't exist.
     curl -s -o /dev/null \
-        -X DELETE "$ES_URL/$INDEX"
+        -X DELETE "${ELASTICSEARCH_URL}/$INDEX"
 
     # Create index from config.
-    curl -sSf -o /dev/null -X PUT "$ES_URL/$INDEX" \
+    curl -sSf -o /dev/null -X PUT "${ELASTICSEARCH_URL}/$INDEX" \
         -H 'Content-Type: application/json' \
         -d @"$CONFIG"
 
