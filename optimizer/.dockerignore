@@ -1,6 +1,19 @@
+# Dependencies
 .venv/
 
+# Build output
 __pycache__/
 *.py[cod]
 
+# Git
+.git*
+
+# Linting
 .ruff_cache/
+
+# Environment / secrets
+.env*
+
+# Misc
+proto/*
+Makefile
