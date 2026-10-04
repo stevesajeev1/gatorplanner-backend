@@ -133,9 +133,10 @@ func buildTextRuleQuery(rule search.Rule) types.QueryVariant {
 					esdsl.NewFieldValue().String(*rule.TextValue),
 				),
 			)
-	}
 
-	return nil
+	default:
+		panic("unreachable")
+	}
 }
 
 func keywordField(field search.Field) string {
@@ -222,6 +223,8 @@ func buildScalarNumberRuleQuery(rule search.Rule) types.QueryVariant {
 	case search.FieldTypeTime:
 		time := *rule.TimeValue
 		value = types.Float64(time.Hour*60 + time.Minute)
+	default:
+		panic("unreachable")
 	}
 
 	switch rule.Filter {
@@ -257,7 +260,7 @@ func buildScalarNumberRuleQuery(rule search.Rule) types.QueryVariant {
 			Lte(value)
 	}
 
-	return nil
+	panic("unreachable")
 }
 
 func buildBooleanRuleQuery(rule search.Rule) types.QueryVariant {
@@ -276,9 +279,10 @@ func buildBooleanRuleQuery(rule search.Rule) types.QueryVariant {
 					esdsl.NewFieldValue().Bool(*rule.BooleanValue),
 				),
 			)
-	}
 
-	return nil
+	default:
+		panic("unreachable")
+	}
 }
 
 func wrapNestedQuery(field search.Field, query types.QueryVariant) types.QueryVariant {

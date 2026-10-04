@@ -177,6 +177,7 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("invalid text value: %w", err)
 		}
 
+		// nolint: exhaustive
 		switch r.Field {
 		case FieldClassMeetType:
 			if !slices.Contains(sqlc.ValidMeetTypes, sqlc.ClassMeetType(*r.TextValue)) {

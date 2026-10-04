@@ -1,1 +1,19 @@
+# Build output
 tmp/
+
+# Git
+.git*
+
+# Environment / secrets
+.env*
+
+# Docker
+Dockerfile.dev
+
+# Misc
+proto/*
+.golangci.yml
+buf*.yaml
+sqlc.yaml
+.air.toml
+Makefile
