@@ -6,7 +6,8 @@ on:
       - main
     paths:
       - "api/**"
-      - "deploy/api/**"
+      - "deploy/api/Dockerfile"
+      - ".github/workflows/build-deploy-api.yml"
   workflow_dispatch:
 
 permissions:
