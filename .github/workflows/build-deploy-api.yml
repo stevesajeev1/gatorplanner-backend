@@ -40,7 +40,7 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/api:latest
-            ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/gatorplanner-api:latest
+            ghcr.io/${{ github.repository_owner }}/gatorplanner-api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
